@@ -102,6 +102,10 @@ end
 function M.resize(list, num_items)
   local opts = M.options[fix_list(list)]
 
+  if not opts.auto_resize then
+    return
+  end
+
   num_items = num_items or #list_items(list)
 
   local height = math.min(num_items, opts.max_height)
@@ -129,7 +133,8 @@ local function hide_lists()
 end
 
 -- Open the `quickfix` or `location` list
-function M.open(list)
+-- If stay == true, the list will not be focused
+function M.open(list, stay)
   list = fix_list(list)
 
   local opts = M.options[list]
@@ -157,6 +162,10 @@ function M.open(list)
   end
 
   hide_lists()
+
+  if stay then
+    vim.cmd "wincmd p"
+  end
 end
 
 -- Close list
@@ -171,14 +180,29 @@ function M.close(list)
 end
 
 -- Toggle list
-function M.toggle(list)
+-- If stay == true, the list will not be focused
+function M.toggle(list, stay)
   list = fix_list(list)
 
   if list_visible(list) then
     M.close(list)
   else
-    M.open(list)
+    M.open(list, stay)
   end
+
+end
+
+-- Clears the quickfix or current location list
+function M.clear(list)
+  list = fix_list(list)
+
+  if list == 'quickfix' then
+    vim.fn.setqflist({})
+  else
+    vim.fn.setloclist('.', {})
+  end
+
+  M.open(list, 0)
 end
 
 -- Returns the list entry currently previous to the cursor
@@ -280,7 +304,7 @@ function M.follow(list, strategy)
 
   local i = strategy_func(items, bufnr, line)
 
-  if i == nil then
+  if i == nil or items[i].bufnr ~= bufnr then
     return
   end
 
