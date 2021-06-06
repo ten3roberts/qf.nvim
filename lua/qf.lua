@@ -294,4 +294,49 @@ function M.follow(list, strategy)
   vim.fn.setpos('.', pos)
 end
 
+-- Wrapping version of [lc]next
+function M.next(list)
+  list = fix_list(list)
+
+  if list == 'quickfix' then
+    vim.cmd "try | :cnext | catch | cfirst | endtry"
+  else
+    vim.cmd "try | :lnext | catch | lfirst | endtry"
+  end
+end
+
+-- Wrapping version of [lc]prev
+function M.prev(list)
+  list = fix_list(list)
+
+  if list == 'quickfix' then
+    vim.cmd "try | :cprev | catch | clast | endtry"
+  else
+    vim.cmd "try | :lprev | catch | llast | endtry"
+  end
+end
+
+-- Wrapping version of [lc]above
+function M.above(list)
+  list = fix_list(list)
+
+  if list == 'quickfix' then
+    vim.cmd "try | :cabove | catch | clast | endtry"
+  else
+    vim.cmd "try | :labove | catch | llast | endtry"
+  end
+end
+
+-- Wrapping version of [lc]below
+function M.below(list)
+  list = fix_list(list)
+
+  if list == 'quickfix' then
+    vim.cmd "try | :cbelow | catch | cfirst | endtry"
+  else
+    vim.cmd "try | :lbelow | catch | lfirst | endtry"
+  end
+end
+
+
 return M
