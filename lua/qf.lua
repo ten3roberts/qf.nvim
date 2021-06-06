@@ -58,6 +58,8 @@ local function setup_autocmds(options)
     vim.cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("quickfix")')
   end
 
+  vim.cmd('autocmd QuitPre * :lua require"qf".close("loc")')
+
   vim.cmd 'augroup END'
 end
 
@@ -114,6 +116,18 @@ function M.resize(list, num_items)
   end
 end
 
+-- Hide quickfix and location lists from the buffers list
+-- Hide linenumbers and relative line numbers
+local function hide_lists()
+  vim.tbl_map(
+    function(win)
+      if win.quickfix or win.loclist then
+        vim.fn.setbufvar(win.bufnr, "&buflisted", 0)
+      end
+    end,
+    vim.fn.getwininfo())
+end
+
 -- Open the `quickfix` or `location` list
 function M.open(list)
   list = fix_list(list)
@@ -141,6 +155,8 @@ function M.open(list)
       vim.cmd "lopen"
     end
   end
+
+  hide_lists()
 end
 
 -- Close list
