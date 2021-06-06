@@ -1,10 +1,10 @@
 # qf.nvim
-Extends the default quickfix and location lists for neovim
+Quickfix and location list management for Neovim
 
 ## Features
 
-- [ ] Automatically open quickfix and location list
-- [ ] Automatically close list when empty
+- [X] Automatically open quickfix and location list
+- [X] Automatically close list when empty
 - [ ] Close location list when parent window is destroyed
 - [X] Automatically shrink lists to the number of items
 - [X] Toggle list
