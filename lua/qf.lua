@@ -70,10 +70,6 @@ function M.open(list)
   local opts = M.options[list]
   local num_items = #list_items(list)
 
-  if num_items == 0 then
-    print ('No items in ' .. list .. ' list')
-  end
-
   -- Auto close
   if num_items == 0 and opts.auto_close then
     if list == 'quickfix' then
@@ -116,6 +112,111 @@ function M.toggle(list)
   else
     M.open(list)
   end
+end
+
+-- Returns the list entry currently previous to the cursor
+local function follow_prev(items, bufnr, line)
+  local i = 1
+  while i <= #items do
+    if items[i].bufnr == bufnr and items[i].lnum > line then
+      return math.max(i - 1, 1)
+    end
+
+    i = i + 1
+  end
+
+  return nil
+end
+
+-- Returns the list entry currently after to the cursor
+local function follow_next(items, bufnr, line)
+  local i = 1
+  while i <= #items do
+    if items[i].bufnr == bufnr and items[i].lnum > line then
+      return i
+    end
+
+    i = i + 1
+  end
+
+  return nil
+end
+
+-- Returns the list entry closest to the cursor vertically
+local function follow_nearest(items, bufnr, line)
+  local i = 1
+  local min = nil
+  local min_i = nil
+
+  while i <= #items do
+    if items[i].bufnr == bufnr then
+      local dist = math.abs(items[i].lnum - line)
+
+      if min == nil or dist < min then
+        min = dist
+        min_i = i
+      end
+    end
+
+    i = i + 1
+  end
+
+  return min_i
+end
+
+
+local strategy_lookup = {
+  prev = follow_prev,
+  next = follow_next,
+  nearest = follow_nearest,
+}
+
+-- strategy is one of the following:
+-- - prev
+-- - next
+-- - nearest
+function M.follow(list, strategy)
+  list = fix_list(list)
+  local opts = M.options[list]
+
+  local line = vim.fn.line('.')
+  local bufnr = vim.fn.bufnr('%')
+
+  -- Cursor hasn't moved to a new line since last call
+  if opts.last_line and opts.last_line == line then
+    return
+  end
+
+  opts.last_line = line
+
+  local strategy_func = strategy_lookup[strategy or 'prev']
+  if strategy_func == nil then
+    error("Invalid follow strategy " .. strategy)
+    return
+  end
+
+  local items = list_items(list)
+
+  if #items == 0 then
+    return
+  end
+
+  local i = strategy_func(items, bufnr, line)
+
+  if i == nil then
+    return
+  end
+
+  -- Select found entry
+  local pos = vim.fn.getcurpos()
+
+  if list == 'quickfix' then
+    vim.cmd('cc ' .. i)
+  else
+    vim.cmd('ll ' .. i)
+  end
+
+  vim.fn.setpos('.', pos)
 end
 
 return M
