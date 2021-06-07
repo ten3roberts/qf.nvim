@@ -54,9 +54,9 @@ local function setup_autocmds(options)
 
   if c.auto_follow then
     if c.follow_slow then
-      vim.cmd('autocmd CursorHold * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
+      vim.cmd('autocmd CursorHold * :lua require"qf".follow("c", "' .. c.auto_follow .. '", 8)')
     else
-      vim.cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
+      vim.cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", 8)')
     end
   end
 
@@ -228,7 +228,7 @@ local function follow_prev(items, bufnr, line)
   local i = 1
   local last_valid = nil
   while i <= #items do
-    if bufnr == nil or items[i].bufnr == bufnr then
+    if items[i].bufnr == bufnr then
       last_valid = i
       if items[i].lnum > line then
         return math.max(i - 1, 1)
@@ -246,7 +246,7 @@ local function follow_next(items, bufnr, line)
   local i = 1
   local last_valid = nil
   while i <= #items do
-    if bufnr == nil or items[i].bufnr == bufnr then
+    if items[i].bufnr == bufnr then
       last_valid = i
       if items[i].lnum > line then
         return i
@@ -266,7 +266,7 @@ local function follow_nearest(items, bufnr, line)
   local min_i = nil
 
   while i <= #items do
-    if bufnr == nil or items[i].bufnr == bufnr then
+    if items[i].bufnr == bufnr then
       local dist = math.abs(items[i].lnum - line)
 
       if min == nil or dist < min then
@@ -292,7 +292,8 @@ local strategy_lookup = {
 -- - 'prev'
 -- - 'next'
 -- - 'nearest'
-function M.follow(list, strategy)
+-- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
+function M.follow(list, strategy, limit)
   list = fix_list(list)
   local opts = M.options[list]
 
@@ -323,6 +324,10 @@ function M.follow(list, strategy)
   local i = strategy_func(items, bufnr, line)
 
   if i == nil or items[i].bufnr ~= bufnr then
+    return
+  end
+
+  if limit and math.abs(items[i].lnum - line > limit) then
     return
   end
 
@@ -366,18 +371,14 @@ function M.above(list)
   list = fix_list(list)
 
   local items = list_items(list)
+  local bufnr = vim.fn.bufnr('%')
   local line = vim.fn.line('.')
 
-  if line <= items[1].lnum then
+  local idx = follow_next(items, bufnr, line - 1) - 1
+
+  if idx == 0 then
     vim.cmd(list .. 'last')
-    return
-  end
-
-  local idx = follow_prev(items, nil, line - 1)
-
-  print (idx)
-
-  if list == 'c' then
+  elseif list == 'c' then
     vim.cmd('cc ' .. idx)
   else
     vim.cmd('ll ' .. idx)
@@ -390,9 +391,10 @@ function M.below(list)
   list = fix_list(list)
 
   local items = list_items(list)
+  local bufnr = vim.fn.bufnr('%')
   local line = vim.fn.line('.')
 
-  local idx = follow_prev(items, nil, line) + 1
+  local idx = follow_prev(items, bufnr, line) + 1
 
   if idx > #items then
     vim.cmd (list .. 'first')
