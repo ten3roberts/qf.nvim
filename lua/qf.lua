@@ -344,9 +344,21 @@ function M.follow(list, strategy, limit)
   vim.fn.setpos('.', pos)
 end
 
+local function check_empty(list, items)
+  if #items == 0 then
+    if list == 'c' then
+      error("Quickfix list empty")
+    else
+      error("Location list empty")
+    end
+  end
+end
+
 -- Wrapping version of [lc]next
 function M.next(list)
   list = fix_list(list)
+
+  check_empty(list, list_items(list))
 
   if list == 'c' then
     vim.cmd "try | :cnext | catch | cfirst | endtry"
@@ -358,6 +370,8 @@ end
 -- Wrapping version of [lc]prev
 function M.prev(list)
   list = fix_list(list)
+
+  check_empty(list, list_items(list))
 
   if list == 'c' then
     vim.cmd "try | :cprev | catch | clast | endtry"
@@ -372,6 +386,9 @@ function M.above(list)
   list = fix_list(list)
 
   local items = list_items(list)
+
+  check_empty(list, items)
+
   local bufnr = vim.fn.bufnr('%')
   local line = vim.fn.line('.')
 
@@ -392,6 +409,9 @@ function M.below(list)
   list = fix_list(list)
 
   local items = list_items(list)
+
+  check_empty(list, items)
+
   local bufnr = vim.fn.bufnr('%')
   local line = vim.fn.line('.')
 
@@ -437,7 +457,6 @@ end
 function M.load(list, name)
   list = fix_list(list)
 
-  print("Name: ", name)
   if name == nil then
     name = prompt_name()
   end
