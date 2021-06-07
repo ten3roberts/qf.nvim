@@ -1,11 +1,12 @@
 local M = {}
 
 local list_defaults = {
-  auto_close = true,
-  auto_follow = false,
-  auto_open = true,
-  auto_resize = true,
-  max_height = 8,
+  auto_close = true, -- Automatically close location/quickfix list if empty
+  auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
+  follow_slow = true, -- Only follow on CursorHold
+  auto_open = true, -- Automatically open location list on QuickFixCmdPost
+  auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
+  max_height = 8, -- Maximum height of location/quickfix list
 }
 
 local defaults = {
@@ -43,12 +44,21 @@ local function setup_autocmds(options)
   local l = options.l
 
   if l.auto_follow then
-    vim.cmd('autocmd CursorMoved * :lua require"qf".follow("l", "' .. l.auto_follow .. '")')
+    if l.follow_slow then
+      vim.cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. c.auto_follow .. '")')
+    else
+      vim.cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
+    end
   end
 
   if c.auto_follow then
-    vim.cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
+    if c.follow_slow then
+      vim.cmd('autocmd CursorHold * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
+    else
+      vim.cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
+    end
   end
+
 
   if l.auto_open then
     vim.cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("l", true)')
@@ -127,6 +137,8 @@ local function hide_lists()
     function(win)
       if win.quickfix or win.loclist then
         vim.fn.setbufvar(win.bufnr, "&buflisted", 0)
+        vim.fn.setbufvar(win.bufnr, "&number", 0)
+        vim.fn.setbufvar(win.bufnr, "&relativenumber", 0)
       end
     end,
     vim.fn.getwininfo())
@@ -276,9 +288,9 @@ local strategy_lookup = {
 }
 
 -- strategy is one of the following:
--- - prev
--- - next
--- - nearest
+-- - 'prev'
+-- - 'next'
+-- - 'nearest'
 function M.follow(list, strategy)
   list = fix_list(list)
   local opts = M.options[list]
@@ -313,6 +325,8 @@ function M.follow(list, strategy)
     return
   end
 
+  -- Clear echo area
+  print('')
   -- Select found entry
   if list == 'c' then
     vim.cmd('cc ' .. i)
@@ -370,6 +384,7 @@ function M.above(list)
 end
 
 -- Wrapping version of [lc]below
+-- Will switch buffer
 function M.below(list)
   list = fix_list(list)
 
