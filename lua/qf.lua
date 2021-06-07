@@ -51,11 +51,11 @@ local function setup_autocmds(options)
   end
 
   if location.auto_open then
-    vim.cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("location")')
+    vim.cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("location", true)')
   end
 
   if quickfix.auto_open then
-    vim.cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("quickfix")')
+    vim.cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("quickfix", true)')
   end
 
   vim.cmd('autocmd QuitPre * :lua require"qf".close("loc")')
@@ -66,6 +66,7 @@ end
 function M.setup(options)
   options = options or {}
   M.options = vim.tbl_deep_extend('force', defaults, options)
+  M.saved = {}
 
   setup_autocmds(M.options)
 end
@@ -193,8 +194,13 @@ function M.toggle(list, stay)
 end
 
 -- Clears the quickfix or current location list
-function M.clear(list)
+-- If name is not nil, the current list will be saved before being cleared
+function M.clear(list, name)
   list = fix_list(list)
+
+  if name then
+    M.save(list, name)
+  end
 
   if list == 'quickfix' then
     vim.fn.setqflist({})
@@ -362,5 +368,62 @@ function M.below(list)
   end
 end
 
+
+-- Save qf or loc list with name
+function M.save(list, name)
+  list = fix_list(list)
+
+  M.saved[name] = list_items(list)
+end
+
+local function prompt_name()
+  local t = {}
+  for k,_ in pairs(M.saved) do
+    t[#t+1] = k
+  end
+
+  if #t == 0 then
+    error("No saved lists")
+  end
+
+  local choice = vim.fn.confirm('Choose saved list', table.concat(t, '\n'))
+  if choice == nil then
+    return nil
+  end
+
+  return t[choice]
+end
+
+-- Loads a saved list into loc or qf
+-- If name is not given, user will be prompted with all saved lists.
+function M.load(list, name)
+  list = fix_list(list)
+
+  print("Name: ", name)
+  if name == nil then
+    name = prompt_name()
+  end
+
+  if name == nil then
+    return
+  end
+
+  local items = M.saved[name]
+
+  if items == nil then
+    error("No list saved with name: " .. name)
+    return
+  end
+
+  if list == 'quickfix' then
+    vim.fn.setqflist(items)
+  else
+    vim.fn.setloclist('.', items)
+  end
+
+  if M.options[list].auto_open then
+    M.open(list, true)
+  end
+end
 
 return M
