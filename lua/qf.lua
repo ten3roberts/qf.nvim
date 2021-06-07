@@ -36,6 +36,7 @@ local function loc_post_commands()
 end
 
 
+-- Setup and configure qf.nvim
 local function setup_autocmds(options)
   vim.cmd 'augroup qf.nvim'
   vim.cmd 'autocmd!'
@@ -403,7 +404,7 @@ function M.below(list)
 end
 
 
--- Save qf or loc list with name
+-- Save quickfix or location list with name
 function M.save(list, name)
   list = fix_list(list)
 
@@ -428,7 +429,7 @@ local function prompt_name()
   return t[choice]
 end
 
--- Loads a saved list into loc or qf
+-- Loads a saved list into the location or quickfix list
 -- If name is not given, user will be prompted with all saved lists.
 function M.load(list, name)
   list = fix_list(list)
