@@ -131,20 +131,6 @@ function M.resize(list, num_items)
   end
 end
 
--- Hide quickfix and location lists from the buffers list
--- Hide linenumbers and relative line numbers
-local function hide_lists()
-  vim.tbl_map(
-    function(win)
-      if win.quickfix or win.loclist then
-        vim.fn.setbufvar(win.bufnr, "&buflisted", 0)
-        vim.fn.setbufvar(win.bufnr, "&number", 0)
-        vim.fn.setbufvar(win.bufnr, "&relativenumber", 0)
-      end
-    end,
-    vim.fn.getwininfo())
-end
-
 -- Open the `quickfix` or `location` list
 -- If stay == true, the list will not be focused
 function M.open(list, stay)
@@ -173,8 +159,6 @@ function M.open(list, stay)
       vim.cmd "lopen"
     end
   end
-
-  hide_lists()
 
   if stay then
     vim.cmd "wincmd p"
