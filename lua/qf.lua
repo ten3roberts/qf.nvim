@@ -2,15 +2,15 @@ local M = {}
 
 local list_defaults = {
   auto_close = true,
-  auto_follow = 'prev',
+  auto_follow = false,
   auto_open = true,
   auto_resize = true,
   max_height = 8,
 }
 
 local defaults = {
-  quickfix = list_defaults,
-  location = list_defaults,
+  c = list_defaults,
+  l = list_defaults,
 }
 
 local post_commands = {
@@ -39,23 +39,23 @@ local function setup_autocmds(options)
   vim.cmd 'augroup qf.nvim'
   vim.cmd 'autocmd!'
 
-  local quickfix = options.quickfix
-  local location = options.location
+  local c = options.c
+  local l = options.l
 
-  if location.auto_follow then
-    vim.cmd('autocmd CursorMoved * :lua require"qf".follow("location", "' .. location.auto_follow .. '")')
+  if l.auto_follow then
+    vim.cmd('autocmd CursorMoved * :lua require"qf".follow("l", "' .. l.auto_follow .. '")')
   end
 
-  if quickfix.auto_follow then
-    vim.cmd('autocmd CursorMoved * :lua require"qf".follow("quickfix", "' .. quickfix.auto_follow .. '")')
+  if c.auto_follow then
+    vim.cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
   end
 
-  if location.auto_open then
-    vim.cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("location", true)')
+  if l.auto_open then
+    vim.cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("l", true)')
   end
 
-  if quickfix.auto_open then
-    vim.cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("quickfix", true)')
+  if c.auto_open then
+    vim.cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
   end
 
   vim.cmd('autocmd QuitPre * :lua require"qf".close("loc")')
@@ -72,7 +72,7 @@ function M.setup(options)
 end
 
 local function list_visible(list)
-  if list == 'quickfix' then
+  if list == 'c' then
     return #vim.tbl_filter(function(t) return t.quickfix == 1 end, vim.fn.getwininfo()) > 0
   else
     return #vim.tbl_filter(function(t) return t.loclist == 1 end, vim.fn.getwininfo()) > 0
@@ -80,7 +80,7 @@ local function list_visible(list)
 end
 
 local function list_items(list)
-  if list == 'quickfix' then
+  if list == 'c' then
     return vim.fn.getqflist()
   else
     return vim.fn.getloclist('.')
@@ -88,15 +88,14 @@ local function list_items(list)
 end
 
 local function fix_list(list)
-  list = list or 'quickfix'
+  list = list or 'c'
 
-  if list == 'qf' or list == 'quickfix' then
-    return 'quickfix'
-  else if list == 'loc' or list == 'location' then
-      return 'location'
-    end
-    error("Invalid list type: " .. list)
+  if list == 'qf' or list == 'quickfix' or list == 'c' then
+    return 'c'
+  elseif list == 'loc' or list == 'location' or list == 'l' then
+    return 'l'
   end
+  error("Invalid list type: " .. list)
 end
 
 -- Automatically resize list to the number of items or max_height
@@ -114,7 +113,7 @@ function M.resize(list, num_items)
     height = opts.max_height
   end
 
-  if list == 'quickfix' then
+  if list == 'c' then
     vim.cmd("cclose | copen " .. height )
   else
     vim.cmd("lclose | lopen " .. height )
@@ -143,7 +142,7 @@ function M.open(list, stay)
 
   -- Auto close
   if num_items == 0 and opts.auto_close then
-    if list == 'quickfix' then
+    if list == 'c' then
       vim.cmd "cclose"
     else
       vim.cmd "lclose"
@@ -155,7 +154,7 @@ function M.open(list, stay)
   if opts.auto_resize then
     M.resize(list, num_items)
   else
-    if list == 'quickfix' then
+    if list == 'c' then
       vim.cmd "copen"
     else
       vim.cmd "lopen"
@@ -173,7 +172,7 @@ end
 function M.close(list)
   list = fix_list(list)
 
-  if list == 'quickfix' then
+  if list == 'c' then
     vim.cmd "cclose"
   else
     vim.cmd "lclose"
@@ -202,7 +201,7 @@ function M.clear(list, name)
     M.save(list, name)
   end
 
-  if list == 'quickfix' then
+  if list == 'c' then
     vim.fn.setqflist({})
   else
     vim.fn.setloclist('.', {})
@@ -216,7 +215,7 @@ local function follow_prev(items, bufnr, line)
   local i = 1
   local last_valid = nil
   while i <= #items do
-    if items[i].bufnr == bufnr then
+    if bufnr == nil or items[i].bufnr == bufnr then
       last_valid = i
       if items[i].lnum > line then
         return math.max(i - 1, 1)
@@ -229,12 +228,12 @@ local function follow_prev(items, bufnr, line)
   return last_valid
 end
 
--- Returns the list entry currently after to the cursor
+-- Returns the list entry currently after the cursor
 local function follow_next(items, bufnr, line)
   local i = 1
   local last_valid = nil
   while i <= #items do
-    if items[i].bufnr == bufnr then
+    if bufnr == nil or items[i].bufnr == bufnr then
       last_valid = i
       if items[i].lnum > line then
         return i
@@ -254,7 +253,7 @@ local function follow_nearest(items, bufnr, line)
   local min_i = nil
 
   while i <= #items do
-    if items[i].bufnr == bufnr then
+    if bufnr == nil or items[i].bufnr == bufnr then
       local dist = math.abs(items[i].lnum - line)
 
       if min == nil or dist < min then
@@ -315,7 +314,7 @@ function M.follow(list, strategy)
   end
 
   -- Select found entry
-  if list == 'quickfix' then
+  if list == 'c' then
     vim.cmd('cc ' .. i)
   else
     vim.cmd('ll ' .. i)
@@ -328,7 +327,7 @@ end
 function M.next(list)
   list = fix_list(list)
 
-  if list == 'quickfix' then
+  if list == 'c' then
     vim.cmd "try | :cnext | catch | cfirst | endtry"
   else
     vim.cmd "try | :lnext | catch | lfirst | endtry"
@@ -339,7 +338,7 @@ end
 function M.prev(list)
   list = fix_list(list)
 
-  if list == 'quickfix' then
+  if list == 'c' then
     vim.cmd "try | :cprev | catch | clast | endtry"
   else
     vim.cmd "try | :lprev | catch | llast | endtry"
@@ -347,13 +346,26 @@ function M.prev(list)
 end
 
 -- Wrapping version of [lc]above
+-- Will switch buffer
 function M.above(list)
   list = fix_list(list)
 
-  if list == 'quickfix' then
-    vim.cmd "try | :cabove | catch | clast | endtry"
+  local items = list_items(list)
+  local line = vim.fn.line('.')
+
+  if line <= items[1].lnum then
+    vim.cmd(list .. 'last')
+    return
+  end
+
+  local idx = follow_prev(items, nil, line - 1)
+
+  print (idx)
+
+  if list == 'c' then
+    vim.cmd('cc ' .. idx)
   else
-    vim.cmd "try | :labove | catch | llast | endtry"
+    vim.cmd('ll ' .. idx)
   end
 end
 
@@ -361,10 +373,17 @@ end
 function M.below(list)
   list = fix_list(list)
 
-  if list == 'quickfix' then
-    vim.cmd "try | :cbelow | catch | cfirst | endtry"
+  local items = list_items(list)
+  local line = vim.fn.line('.')
+
+  local idx = follow_prev(items, nil, line) + 1
+
+  if idx > #items then
+    vim.cmd (list .. 'first')
+  elseif list == 'c' then
+    vim.cmd('cc ' .. idx)
   else
-    vim.cmd "try | :lbelow | catch | lfirst | endtry"
+    vim.cmd('ll ' .. idx)
   end
 end
 
@@ -415,7 +434,7 @@ function M.load(list, name)
     return
   end
 
-  if list == 'quickfix' then
+  if list == 'c' then
     vim.fn.setqflist(items)
   else
     vim.fn.setloclist('.', items)
