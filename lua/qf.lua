@@ -292,6 +292,7 @@ local strategy_lookup = {
 -- - 'prev'
 -- - 'next'
 -- - 'nearest'
+-- (optional) limit, don't select entry further away than limit.
 -- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
 function M.follow(list, strategy, limit)
   list = fix_list(list)

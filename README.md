@@ -73,6 +73,8 @@ require('qf').clear(list, name)
 -- - 'prev'
 -- - 'next'
 -- - 'nearest'
+-- (optional) limit, don't select entry further away than limit.
+-- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
 require('qf').follow(list, strategy)
 
 -- Wrapping version of [lc]next
@@ -143,3 +145,7 @@ require 'qf'.setup {
   }
 }
 ```
+
+## Inspiration
+- [vim-qf](https://github.com/romainl/vim-qf)
+- [vim-loclist-follow](https://github.com/elbeardmorez/vim-loclist-follow)
