@@ -123,12 +123,7 @@ function M.resize(list, stay, num_items)
     return
   end
 
-  if opts.auto_close then
-    vim.cmd(list .. 'close')
-  end
-
   num_items = num_items or #list_items(list)
-
 
   local height = math.max(math.min(num_items, opts.max_height), opts.min_height)
 
@@ -157,7 +152,10 @@ function M.open(list, stay)
     return
   end
 
-  vim.cmd(list .. 'open ' .. opts.max_height)
+  -- Only open if not already open
+  if not list_visible(list) then
+    vim.cmd(list .. 'open ' .. opts.max_height)
+  end
 
   -- Auto resize
   if opts.auto_resize then
@@ -466,6 +464,20 @@ function M.load(list, name)
   if M.options[list].auto_open then
     M.open(list, true)
   end
+end
+
+-- Set location or quickfix list items
+-- Invalidates follow cache
+function M.set(list, items)
+  list = fix_list(list)
+
+  if list == 'c' then
+    vim.fn.setqflist(items)
+  else
+    vim.fn.setloclist('.', items)
+  end
+
+  M.options[list].last_line = nil
 end
 
 return M
