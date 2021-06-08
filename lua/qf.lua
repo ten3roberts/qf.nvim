@@ -7,6 +7,7 @@ local list_defaults = {
   auto_open = true, -- Automatically open location list on QuickFixCmdPost
   auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
   max_height = 8, -- Maximum height of location/quickfix list
+  min_height = 5, -- Minumum height of location/quickfix list
 }
 
 local defaults = {
@@ -109,25 +110,36 @@ local function fix_list(list)
   error("Invalid list type: " .. list)
 end
 
--- Automatically resize list to the number of items or max_height
-function M.resize(list, num_items)
-  local opts = M.options[fix_list(list)]
+-- Automatically resize list to the number of items between max and min height
+-- If stay, the list will not be focused.
+-- num_items can be provided if number of items are already none, if nil, they will be queried
+function M.resize(list, stay, num_items)
+  list = fix_list(list)
 
-  if not opts.auto_resize then
+  local opts = M.options[list]
+
+  -- Don't do anything if list isn't open
+  if not list_visible(list) then
     return
+  end
+
+  if opts.auto_close then
+    vim.cmd(list .. 'close')
   end
 
   num_items = num_items or #list_items(list)
 
-  local height = math.min(num_items, opts.max_height)
-  if height == 0 then
-    height = opts.max_height
+
+  local height = math.max(math.min(num_items, opts.max_height), opts.min_height)
+
+  if height == 0 and opts.auto_close() then
+    vim.cmd (list .. 'close')
   end
 
-  if list == 'c' then
-    vim.cmd("cclose | copen " .. height )
-  else
-    vim.cmd("lclose | lopen " .. height )
+  vim.cmd(list .. "open " .. height )
+
+  if stay then
+    vim.cmd "wincmd p"
   end
 end
 
@@ -141,23 +153,16 @@ function M.open(list, stay)
 
   -- Auto close
   if num_items == 0 and opts.auto_close then
-    if list == 'c' then
-      vim.cmd "cclose"
-    else
-      vim.cmd "lclose"
-    end
+    vim.cmd(list .. 'close')
     return
   end
 
+  vim.cmd(list .. 'open ' .. opts.max_height)
+
   -- Auto resize
   if opts.auto_resize then
-    M.resize(list, num_items)
-  else
-    if list == 'c' then
-      vim.cmd "copen"
-    else
-      vim.cmd "lopen"
-    end
+    -- Stay is handled below
+    M.resize(list, false, num_items)
   end
 
   if stay then
@@ -169,11 +174,7 @@ end
 function M.close(list)
   list = fix_list(list)
 
-  if list == 'c' then
-    vim.cmd "cclose"
-  else
-    vim.cmd "lclose"
-  end
+  vim.cmd(list .. 'close')
 end
 
 -- Toggle list

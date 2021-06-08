@@ -36,6 +36,7 @@ lua require'qf'.setup{}
 ```
 
 ## Usage
+
 qf.nvim exposes a lua api.
 
 Most functions require a first parameter list to specify which list to act on.
@@ -46,8 +47,10 @@ Either 'c','qf', or 'quickfix' for affecting the quickfix list, or
 -- Setup and configure qf.nvim
 require('qf').setup(options)
 
--- Automatically resize list to the number of items or max_height
-require('qf').resize(list, num_items)
+-- Automatically resize list to the number of items between max and min height
+-- If stay, the list will not be focused.
+-- num_items can be provided if number of items are already none, if nil, they will be queried
+require('qf').resize(list, stay, num_items)
 
 -- Hide quickfix and location lists from the buffers list
 -- Hide linenumbers and relative line numbers
@@ -126,23 +129,25 @@ Default setup:
 ```lua
 require 'qf'.setup {
   -- Location list configuration
-  'l' = { 
-    auto_close = true, -- Automatically close location/quickfix list if empty
-    auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
-    follow_slow = true, -- Only follow on CursorHold
-    auto_open = true, -- Automatically open location list on QuickFixCmdPost
-    auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
-    max_height = 8, -- Maximum height of location/quickfix list
-  },
-  -- Quickfix list configuration
-  'c' = { 
-    auto_close = true, -- Automatically close location/quickfix list if empty
-    auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
-    follow_slow = true, -- Only follow on CursorHold
-    auto_open = true, -- Automatically open location list on QuickFixCmdPost
-    auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
-    max_height = 8, -- Maximum height of location/quickfix list
-  }
+    l = { 
+      auto_close = true, -- Automatically close location/quickfix list if empty
+        auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
+        follow_slow = true, -- Only follow on CursorHold
+        auto_open = true, -- Automatically open location list on QuickFixCmdPost
+        auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
+        max_height = 8, -- Maximum height of location/quickfix list
+        min_height = 5, -- Minumum height of location/quickfix list
+    },
+    -- Quickfix list configuration
+    c = { 
+        auto_close = true, -- Automatically close location/quickfix list if empty
+        auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
+        follow_slow = true, -- Only follow on CursorHold
+        auto_open = true, -- Automatically open location list on QuickFixCmdPost
+        auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
+        max_height = 8, -- Maximum height of location/quickfix list
+        min_height = 5, -- Minumum height of location/quickfix list
+      }
 }
 ```
 
