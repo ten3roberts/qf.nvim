@@ -1,5 +1,9 @@
 local M = {}
 
+local api = vim.api
+local fn = vim.fn
+local cmd = vim.cmd
+
 local list_defaults = {
   auto_close = true, -- Automatically close location/quickfix list if empty
   auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
@@ -39,40 +43,40 @@ end
 
 -- Setup and configure qf.nvim
 local function setup_autocmds(options)
-  vim.cmd 'augroup qf.nvim'
-  vim.cmd 'autocmd!'
+  cmd 'augroup qf.nvim'
+  cmd 'autocmd!'
 
   local c = options.c
   local l = options.l
 
   if l.auto_follow then
     if l.follow_slow then
-      vim.cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. c.auto_follow .. '")')
+      cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. c.auto_follow .. '")')
     else
-      vim.cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
+      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
     end
   end
 
   if c.auto_follow then
     if c.follow_slow then
-      vim.cmd('autocmd CursorHold * :lua require"qf".follow("c", "' .. c.auto_follow .. '", 8)')
+      cmd('autocmd CursorHold * :lua require"qf".follow("c", "' .. c.auto_follow .. '", 8)')
     else
-      vim.cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", 8)')
+      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", 8)')
     end
   end
 
 
   if l.auto_open then
-    vim.cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("l", true)')
+    cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("l", true)')
   end
 
   if c.auto_open then
-    vim.cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
+    cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
   end
 
-  vim.cmd('autocmd QuitPre * :lua require"qf".close("loc")')
+  cmd('autocmd QuitPre * :lua require"qf".close("loc")')
 
-  vim.cmd 'augroup END'
+  cmd 'augroup END'
 end
 
 function M.setup(options)
@@ -85,17 +89,17 @@ end
 
 local function list_visible(list)
   if list == 'c' then
-    return #vim.tbl_filter(function(t) return t.quickfix == 1 end, vim.fn.getwininfo()) > 0
+    return #vim.tbl_filter(function(t) return t.quickfix == 1 end, fn.getwininfo()) > 0
   else
-    return #vim.tbl_filter(function(t) return t.loclist == 1 end, vim.fn.getwininfo()) > 0
+    return #vim.tbl_filter(function(t) return t.loclist == 1 end, fn.getwininfo()) > 0
   end
 end
 
 local function list_items(list)
   if list == 'c' then
-    return vim.fn.getqflist()
+    return fn.getqflist()
   else
-    return vim.fn.getloclist('.')
+    return fn.getloclist('.')
   end
 end
 
@@ -107,7 +111,8 @@ local function fix_list(list)
   elseif list == 'loc' or list == 'location' or list == 'l' then
     return 'l'
   end
-  error("Invalid list type: " .. list)
+  api.nvim_err_writeln("Invalid list type: " .. list)
+  return nil
 end
 
 -- Automatically resize list to the number of items between max and min height
@@ -128,13 +133,13 @@ function M.resize(list, stay, num_items)
   local height = math.max(math.min(num_items, opts.max_height), opts.min_height)
 
   if height == 0 and opts.auto_close() then
-    vim.cmd (list .. 'close')
+    cmd (list .. 'close')
   end
 
-  vim.cmd(list .. "open " .. height )
+  cmd(list .. "open " .. height )
 
   if stay then
-    vim.cmd "wincmd p"
+    cmd "wincmd p"
   end
 end
 
@@ -148,13 +153,13 @@ function M.open(list, stay)
 
   -- Auto close
   if num_items == 0 and opts.auto_close then
-    vim.cmd(list .. 'close')
+    cmd(list .. 'close')
     return
   end
 
   -- Only open if not already open
   if not list_visible(list) then
-    vim.cmd(list .. 'open ' .. opts.max_height)
+    cmd(list .. 'open ' .. opts.max_height)
   end
 
   -- Auto resize
@@ -164,7 +169,7 @@ function M.open(list, stay)
   end
 
   if stay then
-    vim.cmd "wincmd p"
+    cmd "wincmd p"
   end
 end
 
@@ -172,7 +177,7 @@ end
 function M.close(list)
   list = fix_list(list)
 
-  vim.cmd(list .. 'close')
+  cmd(list .. 'close')
 end
 
 -- Toggle list
@@ -198,9 +203,9 @@ function M.clear(list, name)
   end
 
   if list == 'c' then
-    vim.fn.setqflist({})
+    fn.setqflist({})
   else
-    vim.fn.setloclist('.', {})
+    fn.setloclist('.', {})
   end
 
   M.open(list, 0)
@@ -281,9 +286,9 @@ function M.follow(list, strategy, limit)
   list = fix_list(list)
   local opts = M.options[list]
 
-  local pos = vim.fn.getpos('.')
+  local pos = fn.getpos('.')
 
-  local bufnr = vim.fn.bufnr('%')
+  local bufnr = fn.bufnr('%')
   local line = pos[2]
 
   -- Cursor hasn't moved to a new line since last call
@@ -295,7 +300,7 @@ function M.follow(list, strategy, limit)
 
   local strategy_func = strategy_lookup[strategy or 'prev']
   if strategy_func == nil then
-    error("Invalid follow strategy " .. strategy)
+    api.nvim_err_writeln("Invalid follow strategy " .. strategy)
     return
   end
 
@@ -311,7 +316,7 @@ function M.follow(list, strategy, limit)
     return
   end
 
-  if limit and math.abs(items[i].lnum - line > limit) then
+  if limit and math.abs(items[i].lnum - line) > limit then
     return
   end
 
@@ -319,34 +324,39 @@ function M.follow(list, strategy, limit)
   print('')
   -- Select found entry
   if list == 'c' then
-    vim.cmd('cc ' .. i)
+    cmd('cc ' .. i)
   else
-    vim.cmd('ll ' .. i)
+    cmd('ll ' .. i)
   end
 
-  vim.fn.setpos('.', pos)
+  fn.setpos('.', pos)
 end
 
 local function check_empty(list, items)
   if #items == 0 then
     if list == 'c' then
-      error("Quickfix list empty")
+      api.nvim_err_writeln("Quickfix list empty")
+      return false
     else
-      error("Location list empty")
+      api.nvim_err_writeln("Location list empty")
+      return false
     end
   end
+  return true
 end
 
 -- Wrapping version of [lc]next
 function M.next(list)
   list = fix_list(list)
 
-  check_empty(list, list_items(list))
+  if not check_empty(list, list_items(list)) then
+    return
+  end
 
   if list == 'c' then
-    vim.cmd "try | :cnext | catch | cfirst | endtry"
+    cmd "try | :cnext | catch | cfirst | endtry"
   else
-    vim.cmd "try | :lnext | catch | lfirst | endtry"
+    cmd "try | :lnext | catch | lfirst | endtry"
   end
 end
 
@@ -354,12 +364,14 @@ end
 function M.prev(list)
   list = fix_list(list)
 
-  check_empty(list, list_items(list))
+  if not check_empty(list, list_items(list)) then
+    return
+  end
 
   if list == 'c' then
-    vim.cmd "try | :cprev | catch | clast | endtry"
+    cmd "try | :cprev | catch | clast | endtry"
   else
-    vim.cmd "try | :lprev | catch | llast | endtry"
+    cmd "try | :lprev | catch | llast | endtry"
   end
 end
 
@@ -370,19 +382,21 @@ function M.above(list)
 
   local items = list_items(list)
 
-  check_empty(list, items)
+  if not check_empty(list, items) then
+    return
+  end
 
-  local bufnr = vim.fn.bufnr('%')
-  local line = vim.fn.line('.')
+  local bufnr = fn.bufnr('%')
+  local line = fn.line('.')
 
   local idx = follow_next(items, bufnr, line - 1) - 1
 
   if idx == 0 then
-    vim.cmd(list .. 'last')
+    cmd(list .. 'last')
   elseif list == 'c' then
-    vim.cmd('cc ' .. idx)
+    cmd('cc ' .. idx)
   else
-    vim.cmd('ll ' .. idx)
+    cmd('ll ' .. idx)
   end
 end
 
@@ -393,19 +407,21 @@ function M.below(list)
 
   local items = list_items(list)
 
-  check_empty(list, items)
+  if not check_empty(list, items) then
+    return
+  end
 
-  local bufnr = vim.fn.bufnr('%')
-  local line = vim.fn.line('.')
+  local bufnr = fn.bufnr('%')
+  local line = fn.line('.')
 
   local idx = follow_prev(items, bufnr, line) + 1
 
   if idx > #items then
-    vim.cmd (list .. 'first')
+    cmd (list .. 'first')
   elseif list == 'c' then
-    vim.cmd('cc ' .. idx)
+    cmd('cc ' .. idx)
   else
-    vim.cmd('ll ' .. idx)
+    cmd('ll ' .. idx)
   end
 end
 
@@ -424,10 +440,10 @@ local function prompt_name()
   end
 
   if #t == 0 then
-    error("No saved lists")
+    api.nvim_err_writeln("No saved lists")
   end
 
-  local choice = vim.fn.confirm('Choose saved list', table.concat(t, '\n'))
+  local choice = fn.confirm('Choose saved list', table.concat(t, '\n'))
   if choice == nil then
     return nil
   end
@@ -451,14 +467,14 @@ function M.load(list, name)
   local items = M.saved[name]
 
   if items == nil then
-    error("No list saved with name: " .. name)
+    api.nvim_err_writeln("No list saved with name: " .. name)
     return
   end
 
   if list == 'c' then
-    vim.fn.setqflist(items)
+    fn.setqflist(items)
   else
-    vim.fn.setloclist('.', items)
+    fn.setloclist('.', items)
   end
 
   if M.options[list].auto_open then
@@ -472,9 +488,9 @@ function M.set(list, items)
   list = fix_list(list)
 
   if list == 'c' then
-    vim.fn.setqflist(items)
+    fn.setqflist(items)
   else
-    vim.fn.setloclist('.', items)
+    fn.setloclist('.', items)
   end
 
   M.options[list].last_line = nil
