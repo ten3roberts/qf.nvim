@@ -493,7 +493,13 @@ function M.set(list, items)
     fn.setloclist('.', items)
   end
 
-  M.options[list].last_line = nil
+  local opts = M.options[list]
+
+  if opts.auto_open then
+    M.open(list, true)
+  end
+
+  opts.last_line = nil
 end
 
 return M

@@ -129,8 +129,8 @@ Default setup:
 ```lua
 require 'qf'.setup {
   -- Location list configuration
-    l = { 
-      auto_close = true, -- Automatically close location/quickfix list if empty
+    l = {
+        auto_close = true, -- Automatically close location/quickfix list if empty
         auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
         follow_slow = true, -- Only follow on CursorHold
         auto_open = true, -- Automatically open location list on QuickFixCmdPost
@@ -139,7 +139,7 @@ require 'qf'.setup {
         min_height = 5, -- Minumum height of location/quickfix list
     },
     -- Quickfix list configuration
-    c = { 
+    c = {
         auto_close = true, -- Automatically close location/quickfix list if empty
         auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
         follow_slow = true, -- Only follow on CursorHold
