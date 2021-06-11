@@ -7,6 +7,7 @@ local cmd = vim.cmd
 local list_defaults = {
   auto_close = true, -- Automatically close location/quickfix list if empty
   auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
+  auto_follow_limit = 8,
   follow_slow = true, -- Only follow on CursorHold
   auto_open = true, -- Automatically open location list on QuickFixCmdPost
   auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
@@ -51,17 +52,17 @@ local function setup_autocmds(options)
 
   if l.auto_follow then
     if l.follow_slow then
-      cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. c.auto_follow .. '")')
+      cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. c.auto_follow .. '", true)')
     else
-      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '")')
+      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", true)')
     end
   end
 
   if c.auto_follow then
     if c.follow_slow then
-      cmd('autocmd CursorHold * :lua require"qf".follow("c", "' .. c.auto_follow .. '", 8)')
+      cmd('autocmd CursorHold * :lua require"qf".follow("c", "' .. c.auto_follow .. '", true)')
     else
-      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", 8)')
+      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", true)')
     end
   end
 
@@ -314,6 +315,10 @@ function M.follow(list, strategy, limit)
 
   if i == nil or items[i].bufnr ~= bufnr then
     return
+  end
+
+  if type(limit == 'boolean') and limit == true then
+    limit = opts.auto_follow_limit
   end
 
   if limit and math.abs(items[i].lnum - line) > limit then

@@ -76,7 +76,7 @@ require('qf').clear(list, name)
 -- - 'prev'
 -- - 'next'
 -- - 'nearest'
--- (optional) limit, don't select entry further away than limit.
+-- (optional) limit, don't select entry further away than limit. Use true to use config value
 -- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
 require('qf').follow(list, strategy)
 
@@ -133,6 +133,7 @@ require 'qf'.setup {
         auto_close = true, -- Automatically close location/quickfix list if empty
         auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
         follow_slow = true, -- Only follow on CursorHold
+        auto_follow_limit = 8, -- Do not follow entry if more than limit lines away
         auto_open = true, -- Automatically open location list on QuickFixCmdPost
         auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
         max_height = 8, -- Maximum height of location/quickfix list
@@ -143,6 +144,7 @@ require 'qf'.setup {
         auto_close = true, -- Automatically close location/quickfix list if empty
         auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
         follow_slow = true, -- Only follow on CursorHold
+        auto_follow_limit = 8, -- Do not follow entry if more than limit lines away
         auto_open = true, -- Automatically open location list on QuickFixCmdPost
         auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
         max_height = 8, -- Maximum height of location/quickfix list
