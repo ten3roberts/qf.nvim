@@ -52,9 +52,9 @@ local function setup_autocmds(options)
 
   if l.auto_follow then
     if l.follow_slow then
-      cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. c.auto_follow .. '", true)')
+      cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. l.auto_follow .. '", true)')
     else
-      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", true)')
+      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. l.auto_follow .. '", true)')
     end
   end
 
