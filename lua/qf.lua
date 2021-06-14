@@ -6,8 +6,8 @@ local cmd = vim.cmd
 
 local list_defaults = {
   auto_close = true, -- Automatically close location/quickfix list if empty
-  auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest
-  auto_follow_limit = 8,
+  auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest, or false to disable
+  auto_follow_limit = 8, -- Do not follow if entry is further away than x lines
   follow_slow = true, -- Only follow on CursorHold
   auto_open = true, -- Automatically open location list on QuickFixCmdPost
   auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
@@ -88,6 +88,19 @@ function M.setup(options)
   setup_autocmds(M.options)
 end
 
+local function check_empty(list, num_items)
+  if num_items == 0 then
+    if list == 'c' then
+      api.nvim_err_writeln("Quickfix list empty")
+      return false
+    else
+      api.nvim_err_writeln("Location list empty")
+      return false
+    end
+  end
+  return true
+end
+
 local function list_visible(list)
   if list == 'c' then
     return #vim.tbl_filter(function(t) return t.quickfix == 1 end, fn.getwininfo()) > 0
@@ -151,6 +164,8 @@ function M.open(list, stay)
 
   local opts = M.options[list]
   local num_items = #list_items(list)
+
+  check_empty(list, num_items)
 
   -- Auto close
   if num_items == 0 and opts.auto_close then
@@ -337,24 +352,11 @@ function M.follow(list, strategy, limit)
   fn.setpos('.', pos)
 end
 
-local function check_empty(list, items)
-  if #items == 0 then
-    if list == 'c' then
-      api.nvim_err_writeln("Quickfix list empty")
-      return false
-    else
-      api.nvim_err_writeln("Location list empty")
-      return false
-    end
-  end
-  return true
-end
-
 -- Wrapping version of [lc]next
 function M.next(list)
   list = fix_list(list)
 
-  if not check_empty(list, list_items(list)) then
+  if not check_empty(list, #list_items(list)) then
     return
   end
 
@@ -369,7 +371,7 @@ end
 function M.prev(list)
   list = fix_list(list)
 
-  if not check_empty(list, list_items(list)) then
+  if not check_empty(list, #list_items(list)) then
     return
   end
 
@@ -387,7 +389,7 @@ function M.above(list)
 
   local items = list_items(list)
 
-  if not check_empty(list, items) then
+  if not check_empty(list, #items) then
     return
   end
 
@@ -412,7 +414,7 @@ function M.below(list)
 
   local items = list_items(list)
 
-  if not check_empty(list, items) then
+  if not check_empty(list, #items) then
     return
   end
 
@@ -499,12 +501,13 @@ function M.set(list, items)
   end
 
   local opts = M.options[list]
+  opts.last_line = nil
 
-  if opts.auto_open then
+  if #items == 0 and opts.auto_close then
+    M.close(list)
+  elseif opts.auto_open then
     M.open(list, true)
   end
-
-  opts.last_line = nil
 end
 
 return M
