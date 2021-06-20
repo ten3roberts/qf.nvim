@@ -1,6 +1,5 @@
 local M = {}
 
-local api = vim.api
 local fn = vim.fn
 local cmd = vim.cmd
 
@@ -9,7 +8,7 @@ local list_defaults = {
   auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest, or false to disable
   auto_follow_limit = 8, -- Do not follow if entry is further away than x lines
   follow_slow = true, -- Only follow on CursorHold
-  auto_open = true, -- Automatically open location list on QuickFixCmdPost
+  auto_open = true, -- Automatically open list on QuickFixCmdPost
   auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
   max_height = 8, -- Maximum height of location/quickfix list
   min_height = 5, -- Minumum height of location/quickfix list
@@ -54,7 +53,7 @@ local function setup_autocmds(options)
     if l.follow_slow then
       cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. l.auto_follow .. '", true)')
     else
-      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. l.auto_follow .. '", true)')
+      cmd('autocmd CursorMoved * :lua require"qf".follow("l", "' .. l.auto_follow .. '", true)')
     end
   end
 
@@ -91,10 +90,10 @@ end
 local function check_empty(list, num_items)
   if num_items == 0 then
     if list == 'c' then
-      api.nvim_err_writeln("Quickfix list empty")
+      print("Quickfix list empty")
       return false
     else
-      api.nvim_err_writeln("Location list empty")
+      print("Location list empty")
       return false
     end
   end
@@ -125,7 +124,7 @@ local function fix_list(list)
   elseif list == 'loc' or list == 'location' or list == 'l' then
     return 'l'
   end
-  api.nvim_err_writeln("Invalid list type: " .. list)
+  print("Invalid list type: " .. list)
   return nil
 end
 
@@ -168,8 +167,10 @@ function M.open(list, stay)
   check_empty(list, num_items)
 
   -- Auto close
-  if num_items == 0 and opts.auto_close then
-    cmd(list .. 'close')
+  if num_items == 0 then
+    if opts.auto_close then
+      cmd(list .. 'close')
+    end
     return
   end
 
@@ -316,7 +317,7 @@ function M.follow(list, strategy, limit)
 
   local strategy_func = strategy_lookup[strategy or 'prev']
   if strategy_func == nil then
-    api.nvim_err_writeln("Invalid follow strategy " .. strategy)
+    print("Invalid follow strategy " .. strategy)
     return
   end
 
@@ -423,7 +424,7 @@ function M.below(list)
 
   local idx = follow_prev(items, bufnr, line) + 1
 
-  if idx > #items then
+  if not idx or idx > #items then
     cmd (list .. 'first')
   elseif list == 'c' then
     cmd('cc ' .. idx)
@@ -447,7 +448,7 @@ local function prompt_name()
   end
 
   if #t == 0 then
-    api.nvim_err_writeln("No saved lists")
+    print("No saved lists")
   end
 
   local choice = fn.confirm('Choose saved list', table.concat(t, '\n'))
@@ -474,7 +475,7 @@ function M.load(list, name)
   local items = M.saved[name]
 
   if items == nil then
-    api.nvim_err_writeln("No list saved with name: " .. name)
+    print("No list saved with name: " .. name)
     return
   end
 
