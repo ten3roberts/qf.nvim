@@ -16,6 +16,8 @@ local list_defaults = {
   max_height = 8, -- Maximum height of location/quickfix list
   min_height = 5, -- Minumum height of location/quickfix list
   wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
+  number = false, -- Show line numbers in list
+  relativenumber = false, -- Show relative line numbers in list
 }
 
 local defaults = {
@@ -173,11 +175,12 @@ function M.on_ft()
     return
   end
 
-  bo.buflisted = false
-  wo.number = false
-  wo.relativenumber = false
-
   local opts = M.config[list]
+
+  bo.buflisted = false
+  wo.number = opts.number
+  wo.relativenumber = opts.relativenumber
+
 
   if opts.auto_resize then
     cmd('resize ' .. get_height(list))

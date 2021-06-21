@@ -142,10 +142,12 @@ require 'qf'.setup {
         auto_follow_limit = 8, -- Do not follow if entry is further away than x lines
         follow_slow = true, -- Only follow on CursorHold
         auto_open = true, -- Automatically open list on QuickFixCmdPost
-        auto_resize = true, -- Auto resize and shrink list if less than `max_height`
+        auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
         max_height = 8, -- Maximum height of location/quickfix list
         min_height = 5, -- Minumum height of location/quickfix list
         wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
+        number = false, -- Show line numbers in list
+        relativenumber = false, -- Show relative line numbers in list
     },
     -- Quickfix list configuration
     c = {
@@ -153,11 +155,13 @@ require 'qf'.setup {
         auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest, or false to disable
         auto_follow_limit = 8, -- Do not follow if entry is further away than x lines
         follow_slow = true, -- Only follow on CursorHold
-        auto_open = true, -- Automatically open location list on QuickFixCmdPost
+        auto_open = true, -- Automatically open list on QuickFixCmdPost
         auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
         max_height = 8, -- Maximum height of location/quickfix list
         min_height = 5, -- Minumum height of location/quickfix list
         wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
+        number = false, -- Show line numbers in list
+        relativenumber = false, -- Show relative line numbers in list
       }
   -- Close location list when quickfix list is opened.
   qf_close_loc = false,
