@@ -107,7 +107,7 @@ local function check_empty(list, num_items, verbose)
   return true
 end
 
-local function list_visible(list)
+function M.list_visible(list)
   if list == 'c' then
     return #vim.tbl_filter(function(t) return t.quickfix == 1 end, fn.getwininfo()) > 0
   else
@@ -144,7 +144,7 @@ function M.resize(list, stay, num_items)
   local opts = M.config[list]
 
   -- Don't do anything if list isn't open
-  if not list_visible(list) then
+  if not M.list_visible(list) then
     return
   end
 
@@ -189,7 +189,7 @@ function M.open(list, stay, verbose)
   end
 
   -- Only open if not already open
-  if not list_visible(list) then
+  if not M.list_visible(list) then
     cmd(list .. 'open ' .. opts.max_height)
   end
 
@@ -216,7 +216,7 @@ end
 function M.toggle(list, stay)
   list = fix_list(list)
 
-  if list_visible(list) then
+  if M.list_visible(list) then
     M.close(list)
   else
     M.open(list, stay)
@@ -246,10 +246,10 @@ end
 local function follow_prev(items, bufnr, line)
   local i = 1
   local last_valid = nil
-  while i <= #items do
-    if items[i].bufnr == bufnr then
+  for _,item in ipairs(items) do
+    if item.valid == 1 and item.bufnr == bufnr then
       last_valid = i
-      if items[i].lnum > line then
+      if item.lnum > line then
         return math.max(i - 1, 1)
       end
     end
@@ -264,10 +264,10 @@ end
 local function follow_next(items, bufnr, line)
   local i = 1
   local last_valid = nil
-  while i <= #items do
-    if items[i].bufnr == bufnr then
+  for _,item in ipairs(items) do
+    if item.valid == 1 and item.bufnr == bufnr then
       last_valid = i
-      if items[i].lnum > line then
+      if item.lnum > line then
         return i
       end
     end
@@ -284,9 +284,9 @@ local function follow_nearest(items, bufnr, line)
   local min = nil
   local min_i = nil
 
-  while i <= #items do
-    if items[i].bufnr == bufnr then
-      local dist = math.abs(items[i].lnum - line)
+  for _,item in ipairs(items) do
+    if items.valid == 1 and item.bufnr == bufnr then
+      local dist = math.abs(item.lnum - line)
 
       if min == nil or dist < min then
         min = dist
@@ -397,6 +397,33 @@ function M.prev(list, verbose)
   end
 end
 
+-- Returns true if the current item is valid by having valid == 1 and a valid bufnr and line number
+local function is_valid(item)
+  return item.valid == 1 and item.bufnr ~= 0 and item.lnum ~= 0 and item.col ~= 0
+end
+
+local function prev_valid(items, idx)
+  while idx and idx > 0 do
+    if is_valid(items[idx]) then
+      break
+    end
+    idx = idx - 1
+  end
+
+  return idx
+end
+
+local function next_valid(items, idx)
+  while idx and idx <= #items do
+    if is_valid(items[idx]) then
+      break
+    end
+    idx = idx + 1
+  end
+
+  return idx
+end
+
 -- Wrapping version of [lc]above
 -- Will switch buffer
 function M.above(list, verbose)
@@ -411,7 +438,7 @@ function M.above(list, verbose)
   local bufnr = fn.bufnr('%')
   local line = fn.line('.')
 
-  local idx = follow_next(items, bufnr, line - 1) - 1
+  local idx = prev_valid(items, follow_next(items, bufnr, line - 1) - 1)
 
   if idx == 0 then
     cmd(list .. 'last')
@@ -436,7 +463,7 @@ function M.below(list, verbose)
   local bufnr = fn.bufnr('%')
   local line = fn.line('.')
 
-  local idx = follow_prev(items, bufnr, line) + 1
+  local idx = next_valid(items, follow_prev(items, bufnr, line) + 1)
 
   if not idx or idx > #items then
     cmd (list .. 'first')
