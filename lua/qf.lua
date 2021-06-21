@@ -3,6 +3,8 @@ local M = {}
 local api = vim.api
 local cmd = vim.cmd
 local fn = vim.fn
+local bo = vim.bo
+local wo = vim.wo
 
 local list_defaults = {
   auto_close = true, -- Automatically close location/quickfix list if empty
@@ -13,6 +15,7 @@ local list_defaults = {
   auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
   max_height = 8, -- Maximum height of location/quickfix list
   min_height = 5, -- Minumum height of location/quickfix list
+  wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
 }
 
 local defaults = {
@@ -135,7 +138,57 @@ local function fix_list(list)
   return nil
 end
 
--- Automatically resize list to the number of items between max and min height
+local function get_height(list, num_items)
+  local opts = M.config[list]
+  num_items = num_items or #list_items(list)
+
+  return math.max(math.min(num_items, opts.max_height), opts.min_height)
+end
+
+-- Same as resize, but does nothing if auto_resize is off
+function M.checked_auto_resize(list, stay)
+  if M.config[list].auto_resize then
+    M.resize(list, stay)
+  end
+end
+
+-- Setup qf filetype specific options
+function M.on_ft()
+  local wininfo = fn.getwininfo(fn.win_getid()) or {}
+  local list = nil
+
+  if not wininfo or not wininfo[1] then
+    return
+  end
+
+  if wininfo[1].quickfix then
+    list = 'c'
+  end
+
+  if wininfo[1].loclist then
+    list = 'l'
+  end
+
+  if list == nil then
+    return
+  end
+
+  bo.buflisted = false
+  wo.number = false
+  wo.relativenumber = false
+
+  local opts = M.config[list]
+
+  if opts.auto_resize then
+    cmd('resize ' .. get_height(list))
+  end
+
+  if opts.wide then
+    cmd "wincmd J"
+  end
+end
+
+-- Resize list to the number of items between max and min height
 -- If stay, the list will not be focused.
 -- num_items can be provided if number of items are already none, if nil, they will be queried
 function M.resize(list, stay, num_items)
@@ -148,9 +201,7 @@ function M.resize(list, stay, num_items)
     return
   end
 
-  num_items = num_items or #list_items(list)
-
-  local height = math.max(math.min(num_items, opts.max_height), opts.min_height)
+  local height = get_height(list, num_items)
 
   if height == 0 and opts.auto_close() then
     cmd (list .. 'close')
@@ -191,12 +242,6 @@ function M.open(list, stay, verbose)
   -- Only open if not already open
   if not M.list_visible(list) then
     cmd(list .. 'open ' .. opts.max_height)
-  end
-
-  -- Auto resize
-  if opts.auto_resize then
-    -- Stay is handled below
-    M.resize(list, false, num_items)
   end
 
   if stay then

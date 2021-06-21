@@ -16,6 +16,8 @@ Quickfix and location list management for Neovim.
 - [X] Clear lists
 - [X] Automatically close the location list when quickfix list opens, saving
   space
+- [X] Open list at the very bottom of the screen rather than at the bottom of
+  current split
 
 ## Installation
 ### [packer](https://github.com/wbthomason/packer.nvim)
@@ -48,6 +50,9 @@ Either 'c','qf', or 'quickfix' for affecting the quickfix list, or
 ```lua
 -- Setup and configure qf.nvim
 require('qf').setup(options)
+
+-- Same as resize, but does nothing if auto_resize is off
+require('qf').checked_auto_resize(list, stay)
 
 -- Automatically resize list to the number of items between max and min height
 -- If stay, the list will not be focused.
@@ -140,6 +145,7 @@ require 'qf'.setup {
         auto_resize = true, -- Auto resize and shrink list if less than `max_height`
         max_height = 8, -- Maximum height of location/quickfix list
         min_height = 5, -- Minumum height of location/quickfix list
+        wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
     },
     -- Quickfix list configuration
     c = {
@@ -151,6 +157,7 @@ require 'qf'.setup {
         auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
         max_height = 8, -- Maximum height of location/quickfix list
         min_height = 5, -- Minumum height of location/quickfix list
+        wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
       }
   -- Close location list when quickfix list is opened.
   qf_close_loc = false,
