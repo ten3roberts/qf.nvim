@@ -14,6 +14,8 @@ Quickfix and location list management for Neovim.
 - [X] Wrapping navigation
 - [X] Save and load lists
 - [X] Clear lists
+- [X] Automatically close the location list when quickfix list opens, saving
+  space
 
 ## Installation
 ### [packer](https://github.com/wbthomason/packer.nvim)
@@ -150,6 +152,8 @@ require 'qf'.setup {
         max_height = 8, -- Maximum height of location/quickfix list
         min_height = 5, -- Minumum height of location/quickfix list
       }
+  -- Close location list when quickfix list is opened.
+  qf_close_loc = false,
 }
 ```
 

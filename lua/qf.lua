@@ -1,7 +1,8 @@
 local M = {}
 
-local fn = vim.fn
+local api = vim.api
 local cmd = vim.cmd
+local fn = vim.fn
 
 local list_defaults = {
   auto_close = true, -- Automatically close location/quickfix list if empty
@@ -17,6 +18,8 @@ local list_defaults = {
 local defaults = {
   c = list_defaults,
   l = list_defaults,
+  -- Close location list when quickfix list is opened.
+  qf_close_loc = false,
 }
 
 local post_commands = {
@@ -42,12 +45,12 @@ end
 
 
 -- Setup and configure qf.nvim
-local function setup_autocmds(options)
+local function setup_autocmds(config)
   cmd 'augroup qf.nvim'
   cmd 'autocmd!'
 
-  local c = options.c
-  local l = options.l
+  local c = config.c
+  local l = config.l
 
   if l.auto_follow then
     if l.follow_slow then
@@ -79,21 +82,25 @@ local function setup_autocmds(options)
   cmd 'augroup END'
 end
 
-function M.setup(options)
-  options = options or {}
-  M.options = vim.tbl_deep_extend('force', defaults, options)
+function M.setup(config)
+  config = config or {}
+  M.config = vim.tbl_deep_extend('force', defaults, config)
   M.saved = {}
 
-  setup_autocmds(M.options)
+  setup_autocmds(M.config)
 end
 
-local function check_empty(list, num_items)
+local function printv(msg, verbose)
+  if verbose ~= false then print(msg) end
+end
+
+local function check_empty(list, num_items, verbose)
   if num_items == 0 then
     if list == 'c' then
-      print("Quickfix list empty")
+      printv("Quickfix list empty", verbose)
       return false
     else
-      print("Location list empty")
+      printv("Location list empty", verbose)
       return false
     end
   end
@@ -124,7 +131,7 @@ local function fix_list(list)
   elseif list == 'loc' or list == 'location' or list == 'l' then
     return 'l'
   end
-  print("Invalid list type: " .. list)
+  api.nvim_err_writeln("Invalid list type: " .. list)
   return nil
 end
 
@@ -134,7 +141,7 @@ end
 function M.resize(list, stay, num_items)
   list = fix_list(list)
 
-  local opts = M.options[list]
+  local opts = M.config[list]
 
   -- Don't do anything if list isn't open
   if not list_visible(list) then
@@ -158,20 +165,27 @@ end
 
 -- Open the `quickfix` or `location` list
 -- If stay == true, the list will not be focused
-function M.open(list, stay)
+function M.open(list, stay, verbose)
   list = fix_list(list)
 
-  local opts = M.options[list]
+  local opts = M.config[list]
   local num_items = #list_items(list)
 
-  check_empty(list, num_items)
+  check_empty(list, num_items, verbose)
 
   -- Auto close
   if num_items == 0 then
     if opts.auto_close then
       cmd(list .. 'close')
+    else
+      -- List is empty, but ensure it is properly sized
+      M.resize(list, true, num_items)
     end
     return
+  end
+
+  if list == 'c'  and M.config.qf_close_loc then
+    cmd 'lclose'
   end
 
   -- Only open if not already open
@@ -301,7 +315,7 @@ local strategy_lookup = {
 -- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
 function M.follow(list, strategy, limit)
   list = fix_list(list)
-  local opts = M.options[list]
+  local opts = M.config[list]
 
   local pos = fn.getpos('.')
 
@@ -317,7 +331,7 @@ function M.follow(list, strategy, limit)
 
   local strategy_func = strategy_lookup[strategy or 'prev']
   if strategy_func == nil then
-    print("Invalid follow strategy " .. strategy)
+    api.nvim_err_writeln("Invalid follow strategy " .. strategy)
     return
   end
 
@@ -354,10 +368,10 @@ function M.follow(list, strategy, limit)
 end
 
 -- Wrapping version of [lc]next
-function M.next(list)
+function M.next(list, verbose)
   list = fix_list(list)
 
-  if not check_empty(list, #list_items(list)) then
+  if not check_empty(list, #list_items(list), verbose) then
     return
   end
 
@@ -369,10 +383,10 @@ function M.next(list)
 end
 
 -- Wrapping version of [lc]prev
-function M.prev(list)
+function M.prev(list, verbose)
   list = fix_list(list)
 
-  if not check_empty(list, #list_items(list)) then
+  if not check_empty(list, #list_items(list), verbose) then
     return
   end
 
@@ -385,12 +399,12 @@ end
 
 -- Wrapping version of [lc]above
 -- Will switch buffer
-function M.above(list)
+function M.above(list, verbose)
   list = fix_list(list)
 
   local items = list_items(list)
 
-  if not check_empty(list, #items) then
+  if not check_empty(list, #items, verbose) then
     return
   end
 
@@ -410,12 +424,12 @@ end
 
 -- Wrapping version of [lc]below
 -- Will switch buffer
-function M.below(list)
+function M.below(list, verbose)
   list = fix_list(list)
 
   local items = list_items(list)
 
-  if not check_empty(list, #items) then
+  if not check_empty(list, #items, verbose) then
     return
   end
 
@@ -448,7 +462,7 @@ local function prompt_name()
   end
 
   if #t == 0 then
-    print("No saved lists")
+    api.nvim_err_writeln("No saved lists")
   end
 
   local choice = fn.confirm('Choose saved list', table.concat(t, '\n'))
@@ -475,7 +489,7 @@ function M.load(list, name)
   local items = M.saved[name]
 
   if items == nil then
-    print("No list saved with name: " .. name)
+    api.nvim_err_writeln("No list saved with name: " .. name)
     return
   end
 
@@ -485,7 +499,7 @@ function M.load(list, name)
     fn.setloclist('.', items)
   end
 
-  if M.options[list].auto_open then
+  if M.config[list].auto_open then
     M.open(list, true)
   end
 end
@@ -501,7 +515,7 @@ function M.set(list, items)
     fn.setloclist('.', items)
   end
 
-  local opts = M.options[list]
+  local opts = M.config[list]
   opts.last_line = nil
 
   if #items == 0 and opts.auto_close then
