@@ -163,11 +163,11 @@ function M.on_ft()
     return
   end
 
-  if wininfo[1].quickfix then
+  if wininfo[1].quickfix == 1 then
     list = 'c'
   end
 
-  if wininfo[1].loclist then
+  if wininfo[1].loclist == 1 then
     list = 'l'
   end
 
