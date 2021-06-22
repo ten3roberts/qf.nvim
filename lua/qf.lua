@@ -293,7 +293,7 @@ end
 -- Returns the list entry currently previous to the cursor
 local function follow_prev(items, bufnr, line)
   local i = 1
-  local last_valid = nil
+  local last_valid = 1
   for _,item in ipairs(items) do
     if item.valid == 1 and item.bufnr == bufnr then
       last_valid = i
@@ -311,7 +311,7 @@ end
 -- Returns the list entry currently after the cursor
 local function follow_next(items, bufnr, line)
   local i = 1
-  local last_valid = nil
+  local last_valid = 1
   for _,item in ipairs(items) do
     if item.valid == 1 and item.bufnr == bufnr then
       last_valid = i
@@ -447,7 +447,7 @@ end
 
 -- Returns true if the current item is valid by having valid == 1 and a valid bufnr and line number
 local function is_valid(item)
-  return item.valid == 1 and item.bufnr ~= 0 and item.lnum ~= 0 and item.col ~= 0
+  return item.valid == 1 and item.bufnr ~= 0
 end
 
 local function prev_valid(items, idx)
