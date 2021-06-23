@@ -100,6 +100,8 @@ local function setup_autocmds(config)
     cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
   end
 
+  cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
+
   cmd('autocmd QuitPre * :lua require"qf".close("loc")')
 
   cmd 'augroup END'
@@ -177,6 +179,25 @@ function M.checked_auto_resize(list, stay)
   end
 end
 
+-- Close and opens list if already open.
+-- This is to fix the list stretching bottom of a new vertical split.
+function M.reopen(list)
+  list = fix_list(list)
+  local num_items = #list_items(list)
+
+  if num_items == 0 or not M.list_visible('list') then
+    return
+  end
+
+  cmd(list .. 'close | ' .. list .. 'window ' .. get_height(list, num_items))
+end
+
+function M.reopen_all()
+  local reopen = M.reopen
+  reopen('c')
+  reopen('l')
+end
+
 -- Setup qf filetype specific options
 function M.on_ft()
   local wininfo = fn.getwininfo(fn.win_getid()) or {}
@@ -244,6 +265,7 @@ end
 -- If stay == true, the list will not be focused
 -- If auto_close is true, the list will be closed if empty, similar to cwindow
 function M.open(list, stay, verbose)
+  print('opening')
   list = fix_list(list)
 
   local opts = M.config[list]

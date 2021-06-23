@@ -18,6 +18,10 @@ Quickfix and location list management for Neovim.
   space
 - [X] Open list at the very bottom of the screen rather than at the bottom of
   current split
+- [X] Automatically open or close list on window leave and enter
+- [X] Make list regroup to window on split
+
+Qf.nvim offers many customization options to suit your workflow.
 
 ## Installation
 ### [packer](https://github.com/wbthomason/packer.nvim)
