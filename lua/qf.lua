@@ -1,5 +1,3 @@
-local M = {}
-
 local api = vim.api
 local cmd = vim.cmd
 local fn = vim.fn
@@ -26,6 +24,8 @@ local defaults = {
   -- Close location list when quickfix list is opened.
   qf_close_loc = false,
 }
+
+local M = { config = defaults }
 
 local post_commands = {
   'make', 'grep', 'grepadd', 'vimgrep', 'vimgrepadd',
@@ -142,6 +142,11 @@ end
 
 local function get_height(list, num_items)
   local opts = M.config[list]
+
+  if opts.auto_resize == false then
+    return opts.max_height
+  end
+
   num_items = num_items or #list_items(list)
 
   return math.max(math.min(num_items, opts.max_height), opts.min_height)
@@ -243,9 +248,7 @@ function M.open(list, stay, verbose)
   end
 
   -- Only open if not already open
-  if not M.list_visible(list) then
-    cmd(list .. 'open ' .. opts.max_height)
-  end
+  cmd(list .. 'open ' .. get_height(list, num_items))
 
   if stay then
     cmd "wincmd p"
@@ -488,9 +491,11 @@ function M.above(list, verbose)
 
   local idx = prev_valid(items, follow_next(items, bufnr, line - 1) - 1)
 
+  -- Go to last valid entry
   if idx == 0 then
-    cmd(list .. 'last')
-  elseif list == 'c' then
+    idx = prev_valid(items, #items)
+  end
+  if list == 'c' then
     cmd('cc ' .. idx)
   else
     cmd('ll ' .. idx)
@@ -513,9 +518,11 @@ function M.below(list, verbose)
 
   local idx = next_valid(items, follow_prev(items, bufnr, line) + 1)
 
+  -- Go to first valid entry
   if not idx or idx > #items then
-    cmd (list .. 'first')
-  elseif list == 'c' then
+    idx = next_valid(items, 1)
+  end
+  if list == 'c' then
     cmd('cc ' .. idx)
   else
     cmd('ll ' .. idx)
