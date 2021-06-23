@@ -20,6 +20,7 @@ Quickfix and location list management for Neovim.
   current split
 - [X] Automatically open or close list on window leave and enter
 - [X] Make list regroup to window on split
+- [X] Close other location list when quickfix opens and vice verse
 
 Qf.nvim offers many customization options to suit your workflow.
 
@@ -155,6 +156,7 @@ require 'qf'.setup {
         relativenumber = false, -- Show relative line numbers in list
         unfocus_close = false, -- Close list when window loses focus
         focus_open = false, -- Auto open list on window focus if it contains items
+        close_other = false, -- Close quickfix list when location list opens
     },
     -- Quickfix list configuration
     c = {
@@ -171,9 +173,8 @@ require 'qf'.setup {
         relativenumber = false, -- Show relative line numbers in list
         unfocus_close = false, -- Close list when window loses focus
         focus_open = false, -- Auto open list on window focus if it contains items
+        close_other = false, -- Close location list when quickfix list opens
       }
-  -- Close location list when quickfix list is opened.
-  qf_close_loc = false,
 }
 ```
 

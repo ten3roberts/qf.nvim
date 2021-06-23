@@ -18,13 +18,12 @@ local list_defaults = {
   relativenumber = false, -- Show relative line numbers in list
   unfocus_close = false, -- Close list when window loses focus
   focus_open = false, -- Auto open list on window focus if it contains items
+  close_other = false, -- Close other list kind when list opens
 }
 
 local defaults = {
   c = list_defaults,
   l = list_defaults,
-  -- Close location list when quickfix list is opened.
-  qf_close_loc = false,
 }
 
 local M = { config = defaults }
@@ -100,7 +99,7 @@ local function setup_autocmds(config)
     cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
   end
 
-  cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
+  -- cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
 
   cmd('autocmd QuitPre * :lua require"qf".close("loc")')
 
@@ -134,7 +133,7 @@ end
 
 function M.list_visible(list)
   if list == 'c' then
-    return #vim.tbl_filter(function(t) return t.quickfix == 1 end, fn.getwininfo()) > 0
+    return #vim.tbl_filter(function(t) return t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo()) > 0
   else
     return vim.fn.getloclist(0, { winid = 0 })['winid'] ~= 0
   end
@@ -185,12 +184,13 @@ function M.reopen(list)
   list = fix_list(list)
   local num_items = #list_items(list)
 
-  if not M.list_visible('list') then
+  if not M.list_visible(list) then
     return
   end
-  print("Reopening")
 
-  cmd(list .. 'close | ' .. list .. 'open ' .. get_height(list, num_items))
+  print("Reopening " .. list)
+
+  cmd('noau ' .. list .. 'close | ' .. list .. 'open ' .. get_height(list, num_items))
 end
 
 function M.reopen_all()
@@ -201,8 +201,8 @@ end
 
 -- Setup qf filetype specific options
 function M.on_ft()
+  print("On ft")
   local wininfo = fn.getwininfo(fn.win_getid()) or {}
-  local list = nil
 
   if not wininfo or not wininfo[1] then
     return
@@ -225,7 +225,6 @@ function M.on_ft()
   bo.buflisted = false
   wo.number = opts.number
   wo.relativenumber = opts.relativenumber
-
 
   if opts.auto_resize then
     cmd('resize ' .. get_height(list))
@@ -274,6 +273,7 @@ function M.open(list, stay, verbose)
 
   check_empty(list, num_items, verbose)
 
+
   -- Auto close
   if num_items == 0 then
     if opts.auto_close then
@@ -285,15 +285,18 @@ function M.open(list, stay, verbose)
     return
   end
 
-  if list == 'c'  and M.config.qf_close_loc then
-    cmd 'lclose'
-  end
-
-  -- Only open if not already open
   cmd(list .. 'open ' .. get_height(list, num_items))
 
   if stay then
     cmd "wincmd p"
+  end
+
+  if opts.close_other then
+    if list == 'c' then
+      cmd 'lclose'
+    elseif list == 'l' then
+      cmd 'cclose'
+    end
   end
 end
 
