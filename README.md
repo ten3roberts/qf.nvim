@@ -148,6 +148,7 @@ require 'qf'.setup {
         wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
         number = false, -- Show line numbers in list
         relativenumber = false, -- Show relative line numbers in list
+        unfocus_close = false, -- Close list when window loses focus
     },
     -- Quickfix list configuration
     c = {
@@ -162,6 +163,7 @@ require 'qf'.setup {
         wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
         number = false, -- Show line numbers in list
         relativenumber = false, -- Show relative line numbers in list
+        unfocus_close = false, -- Close list when window loses focus
       }
   -- Close location list when quickfix list is opened.
   qf_close_loc = false,

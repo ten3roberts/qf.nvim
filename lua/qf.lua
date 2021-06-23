@@ -16,6 +16,7 @@ local list_defaults = {
   wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
   number = false, -- Show line numbers in list
   relativenumber = false, -- Show relative line numbers in list
+  unfocus_close = false, -- Close list when window loses focus
 }
 
 local defaults = {
@@ -71,6 +72,14 @@ local function setup_autocmds(config)
     else
       cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", true)')
     end
+  end
+
+  if c.unfocus_close then
+    cmd('autocmd WinLeave * :cclose')
+  end
+
+  if l.unfocus_close then
+    cmd('autocmd WinLeave * :lclose')
   end
 
 
