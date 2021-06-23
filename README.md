@@ -63,6 +63,7 @@ require('qf').resize(list, stay, num_items)
 -- Hide linenumbers and relative line numbers
 -- Open the `quickfix` or `location` list
 -- If stay == true, the list will not be focused
+-- If auto_close is true, the list will be closed if empty, similar to cwindow
 require('qf').open(list, stay)
 
 -- Close list
@@ -149,6 +150,7 @@ require 'qf'.setup {
         number = false, -- Show line numbers in list
         relativenumber = false, -- Show relative line numbers in list
         unfocus_close = false, -- Close list when window loses focus
+        focus_open = false, -- Auto open list on window focus if it contains items
     },
     -- Quickfix list configuration
     c = {
@@ -164,6 +166,7 @@ require 'qf'.setup {
         number = false, -- Show line numbers in list
         relativenumber = false, -- Show relative line numbers in list
         unfocus_close = false, -- Close list when window loses focus
+        focus_open = false, -- Auto open list on window focus if it contains items
       }
   -- Close location list when quickfix list is opened.
   qf_close_loc = false,

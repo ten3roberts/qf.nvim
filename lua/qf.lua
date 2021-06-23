@@ -17,6 +17,7 @@ local list_defaults = {
   number = false, -- Show line numbers in list
   relativenumber = false, -- Show relative line numbers in list
   unfocus_close = false, -- Close list when window loses focus
+  focus_open = false, -- Auto open list on window focus if it contains items
 }
 
 local defaults = {
@@ -74,14 +75,22 @@ local function setup_autocmds(config)
     end
   end
 
-  if c.unfocus_close then
-    cmd('autocmd WinLeave * :cclose')
-  end
-
   if l.unfocus_close then
     cmd('autocmd WinLeave * :lclose')
   end
 
+  if c.unfocus_close then
+    cmd('autocmd WinLeave * :cclose')
+  end
+
+
+  if l.focus_open then
+    cmd('autocmd WinEnter * :lua require"qf".open("l", true)')
+  end
+
+  if c.focus_open then
+    cmd('autocmd WinEnter * :lua require"qf".open("c", true)')
+  end
 
   if l.auto_open then
     cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("l", true)')
@@ -233,6 +242,7 @@ end
 
 -- Open the `quickfix` or `location` list
 -- If stay == true, the list will not be focused
+-- If auto_close is true, the list will be closed if empty, similar to cwindow
 function M.open(list, stay, verbose)
   list = fix_list(list)
 
