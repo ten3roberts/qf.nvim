@@ -136,7 +136,7 @@ function M.list_visible(list)
   if list == 'c' then
     return #vim.tbl_filter(function(t) return t.quickfix == 1 end, fn.getwininfo()) > 0
   else
-    return #vim.tbl_filter(function(t) return t.loclist == 1 end, fn.getwininfo()) > 0
+    return vim.fn.getloclist(0, { winid = 0 })['winid'] ~= 0
   end
 end
 
@@ -185,11 +185,12 @@ function M.reopen(list)
   list = fix_list(list)
   local num_items = #list_items(list)
 
-  if num_items == 0 or not M.list_visible('list') then
+  if not M.list_visible('list') then
     return
   end
+  print("Reopening")
 
-  cmd(list .. 'close | ' .. list .. 'window ' .. get_height(list, num_items))
+  cmd(list .. 'close | ' .. list .. 'open ' .. get_height(list, num_items))
 end
 
 function M.reopen_all()
