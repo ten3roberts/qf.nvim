@@ -52,6 +52,9 @@ Most functions require a first parameter list to specify which list to act on.
 Either 'c','qf', or 'quickfix' for affecting the quickfix list, or
 'l','loc','location' for affecting the location list. 
 
+If a value of 'visible' is given, it will use the currently visible list type,
+or the quickfix window as a fallback.
+
 ```lua
 -- Setup and configure qf.nvim
 require('qf').setup(options)
@@ -129,6 +132,9 @@ nnoremap <leader>k <cmd>lua require'qf'.above('l')<CR> " Go to previous location
 
 nnoremap <leader>J <cmd>lua require'qf'.below('c')<CR> " Go to next quickfix entry from cursor
 nnoremap <leader>K <cmd>lua require'qf'.above('c')<CR> " Go to previous quickfix entry from cursor
+
+nnoremap ]q <cmd>lua require'qf'.below('visible')<CR> " Go to next entry from cursor in visible list
+nnoremap [q <cmd>lua require'qf'.above('visible')<CR> " Go to previous entry from cursor in visible list
 ```
 
 ## Configuration

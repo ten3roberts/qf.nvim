@@ -131,7 +131,28 @@ local function check_empty(list, num_items, verbose)
   return true
 end
 
+local function fix_list(list)
+  list = list or 'c'
+
+  if list == 'qf' or list == 'quickfix' or list == 'c' then
+    return 'c'
+  elseif list == 'loc' or list == 'location' or list == 'l' then
+    return 'l'
+  end
+
+  if list == 'visible' then
+    if M.list_visible('l') then
+      return 'l'
+    else
+      return 'c'
+    end
+  end
+  api.nvim_err_writeln("Invalid list type: " .. list)
+  return nil
+end
+
 function M.list_visible(list)
+  list = fix_list(list)
   if list == 'c' then
     return #vim.tbl_filter(function(t) return t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo()) > 0
   else
@@ -145,18 +166,6 @@ local function list_items(list)
   else
     return fn.getloclist('.')
   end
-end
-
-local function fix_list(list)
-  list = list or 'c'
-
-  if list == 'qf' or list == 'quickfix' or list == 'c' then
-    return 'c'
-  elseif list == 'loc' or list == 'location' or list == 'l' then
-    return 'l'
-  end
-  api.nvim_err_writeln("Invalid list type: " .. list)
-  return nil
 end
 
 local function get_height(list, num_items)
@@ -173,6 +182,7 @@ end
 
 -- Same as resize, but does nothing if auto_resize is off
 function M.checked_auto_resize(list, stay)
+  list = fix_list(list)
   if M.config[list].auto_resize then
     M.resize(list, stay)
   end
@@ -188,8 +198,6 @@ function M.reopen(list)
     return
   end
 
-  print("Reopening " .. list)
-
   cmd('noau ' .. list .. 'close | ' .. list .. 'open ' .. get_height(list, num_items))
 end
 
@@ -201,8 +209,8 @@ end
 
 -- Setup qf filetype specific options
 function M.on_ft()
-  print("On ft")
   local wininfo = fn.getwininfo(fn.win_getid()) or {}
+  local list = nil
 
   if not wininfo or not wininfo[1] then
     return
@@ -225,6 +233,7 @@ function M.on_ft()
   bo.buflisted = false
   wo.number = opts.number
   wo.relativenumber = opts.relativenumber
+  wo.winfixheight = true
 
   if opts.auto_resize then
     cmd('resize ' .. get_height(list))
@@ -265,14 +274,12 @@ end
 -- If stay == true, the list will not be focused
 -- If auto_close is true, the list will be closed if empty, similar to cwindow
 function M.open(list, stay, verbose)
-  print('opening')
   list = fix_list(list)
 
   local opts = M.config[list]
   local num_items = #list_items(list)
 
   check_empty(list, num_items, verbose)
-
 
   -- Auto close
   if num_items == 0 then
@@ -539,6 +546,9 @@ function M.above(list, verbose)
   -- Go to last valid entry
   if idx == 0 then
     idx = prev_valid(items, #items)
+  end
+  if idx == 0 then
+    idx = 1
   end
   if list == 'c' then
     cmd('cc ' .. idx)
