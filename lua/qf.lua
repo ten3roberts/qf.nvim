@@ -99,7 +99,7 @@ local function setup_autocmds(config)
     cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
   end
 
-  -- cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
+  cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
 
   cmd('autocmd QuitPre * :lua require"qf".close("loc")')
 
@@ -153,8 +153,9 @@ end
 
 function M.list_visible(list)
   list = fix_list(list)
+  local tabnr = fn.tabpagenr()
   if list == 'c' then
-    return #vim.tbl_filter(function(t) return t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo()) > 0
+    return #vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo()) > 0
   else
     return vim.fn.getloclist(0, { winid = 0 })['winid'] ~= 0
   end
@@ -198,6 +199,7 @@ function M.reopen(list)
     return
   end
 
+  print("Reopening ", list)
   cmd('noau ' .. list .. 'close | ' .. list .. 'open ' .. get_height(list, num_items))
 end
 
@@ -345,6 +347,10 @@ function M.clear(list, name)
   M.open(list, 0)
 end
 
+local function clear_prompt()
+  vim.api.nvim_command('normal :esc<CR>')
+end
+
 -- Returns the list entry currently previous to the cursor
 local function follow_prev(items, bufnr, line)
   local i = 1
@@ -459,7 +465,7 @@ function M.follow(list, strategy, limit)
   end
 
   -- Clear echo area
-  print('')
+  clear_prompt()
   -- Select found entry
   if list == 'c' then
     cmd('cc ' .. i)
@@ -547,9 +553,12 @@ function M.above(list, verbose)
   if idx == 0 then
     idx = prev_valid(items, #items)
   end
+
+  -- No valid entries, go to first.
   if idx == 0 then
     idx = 1
   end
+
   if list == 'c' then
     cmd('cc ' .. idx)
   else
@@ -583,7 +592,6 @@ function M.below(list, verbose)
     cmd('ll ' .. idx)
   end
 end
-
 
 -- Save quickfix or location list with name
 function M.save(list, name)
