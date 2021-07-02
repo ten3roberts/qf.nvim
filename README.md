@@ -96,19 +96,23 @@ require('qf').clear(list, name)
 -- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
 require('qf').follow(list, strategy)
 
--- Wrapping version of [lc]next
-require('qf').next(list)
+-- Wrapping version of [lc]next. Also takes into account valid entries.
+-- If wrap is nil or true, it will wrap around the list
+require('qf').next(list, wrap = true)
 
--- Wrapping version of [lc]prev
-require('qf').prev(list)
+-- Wrapping version of [lc]prev. Also takes into account valid entries.
+-- If wrap is nil or true, it will wrap around the list
+require('qf').prev(list, wrap = true)
 
 -- Wrapping version of [lc]above
 -- Will switch buffer
-require('qf').above(list)
+-- If wrap is nil or true, it will wrap around the list
+require('qf').above(list, wrap = true)
 
 -- Wrapping version of [lc]below
 -- Will switch buffer
-require('qf').below(list)
+-- If wrap is nil or true, it will wrap around the list
+require('qf').below(list, wrap = true)
 
 -- Save quickfix or location list with name
 require('qf').save(list, name)

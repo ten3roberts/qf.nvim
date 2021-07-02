@@ -99,7 +99,7 @@ local function setup_autocmds(config)
     cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
   end
 
-  cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
+  cmd('autocmd WinNew * :lua require"qf".reopen_all()')
 
   cmd('autocmd QuitPre * :lua require"qf".close("loc")')
 
@@ -192,6 +192,10 @@ end
 -- Close and opens list if already open.
 -- This is to fix the list stretching bottom of a new vertical split.
 function M.reopen(list)
+  if vim.o.ft == 'qf' then
+    return
+  end
+
   list = fix_list(list)
   local num_items = #list_items(list)
 
@@ -199,8 +203,10 @@ function M.reopen(list)
     return
   end
 
-  print("Reopening ", list)
-  cmd('noau ' .. list .. 'close | ' .. list .. 'open ' .. get_height(list, num_items))
+  print("Reopening " .. list)
+  cmd('noau wincmd p | noau ' .. list .. 'close | ' .. list .. 'open ' .. get_height(list, num_items))
+
+  M.on_ft()
 end
 
 function M.reopen_all()
@@ -210,13 +216,17 @@ function M.reopen_all()
 end
 
 -- Setup qf filetype specific options
-function M.on_ft()
-  local wininfo = fn.getwininfo(fn.win_getid()) or {}
+function M.on_ft(winid)
+  winid = winid or fn.win_getid()
+  local wininfo = fn.getwininfo(winid) or {}
   local list = nil
 
   if not wininfo or not wininfo[1] then
+    print("Not a quickfix list")
     return
   end
+
+  -- print(vim.inspect(wininfo))
 
   if wininfo[1].quickfix == 1 then
     list = 'c'
@@ -268,7 +278,7 @@ function M.resize(list, stay, num_items)
   cmd(list .. "open " .. height )
 
   if stay then
-    cmd "wincmd p"
+    cmd "noau wincmd p"
   end
 end
 
@@ -297,7 +307,7 @@ function M.open(list, stay, verbose)
   cmd(list .. 'open ' .. get_height(list, num_items))
 
   if stay then
-    cmd "wincmd p"
+    cmd "noau wincmd p"
   end
 
   if opts.close_other then
@@ -423,6 +433,10 @@ local strategy_lookup = {
 -- (optional) limit, don't select entry further away than limit.
 -- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
 function M.follow(list, strategy, limit)
+  if api.nvim_get_mode().mode ~= 'n' then
+    return
+  end
+
   list = fix_list(list)
   local opts = M.config[list]
 
@@ -476,33 +490,41 @@ function M.follow(list, strategy, limit)
   fn.setpos('.', pos)
 end
 
--- Wrapping version of [lc]next
-function M.next(list, verbose)
+-- Wrapping version of [lc]next. Also takes into account valid entries.
+-- If wrap is nil or true, it will wrap around the list
+function M.next(list, verbose, wrap)
+  if wrap == nil then
+    wrap = true
+  end
   list = fix_list(list)
 
   if not check_empty(list, #list_items(list), verbose) then
     return
   end
 
-  if list == 'c' then
-    cmd "try | :cnext | catch | cfirst | endtry"
+  if wrap then
+    cmd ("try | :" .. list .. "next | catch | " .. list .. "first | endtry")
   else
-    cmd "try | :lnext | catch | lfirst | endtry"
+    cmd ("try | :" .. list .. "next | catch | call nvim_err_writeln('No More Items') | endtry")
   end
 end
 
--- Wrapping version of [lc]prev
-function M.prev(list, verbose)
+-- Wrapping version of [lc]prev. Also takes into account valid entries.
+-- If wrap is nil or true, it will wrap around the list
+function M.prev(list, verbose, wrap)
+  if wrap == nil then
+    wrap = true
+  end
   list = fix_list(list)
 
   if not check_empty(list, #list_items(list), verbose) then
     return
   end
 
-  if list == 'c' then
-    cmd "try | :cprev | catch | clast | endtry"
+  if wrap then
+    cmd ("try | :" .. list .. "prev | catch | " .. list .. "last | endtry")
   else
-    cmd "try | :lprev | catch | llast | endtry"
+    cmd ("try | :" .. list .. "prev | catch | call nvim_err_writeln('No More Items') | endtry")
   end
 end
 
@@ -535,7 +557,11 @@ end
 
 -- Wrapping version of [lc]above
 -- Will switch buffer
-function M.above(list, verbose)
+function M.above(list, verbose, wrap)
+  if wrap == nil then
+    wrap = true
+  end
+
   list = fix_list(list)
 
   local items = list_items(list)
@@ -551,7 +577,12 @@ function M.above(list, verbose)
 
   -- Go to last valid entry
   if idx == 0 then
-    idx = prev_valid(items, #items)
+    if wrap then
+      idx = prev_valid(items, #items)
+    else
+      api.nvim_err_writeln("No more items")
+      return
+    end
   end
 
   -- No valid entries, go to first.
@@ -568,7 +599,10 @@ end
 
 -- Wrapping version of [lc]below
 -- Will switch buffer
-function M.below(list, verbose)
+function M.below(list, verbose, wrap)
+  if wrap == nil then
+    wrap = true
+  end
   list = fix_list(list)
 
   local items = list_items(list)
@@ -584,7 +618,11 @@ function M.below(list, verbose)
 
   -- Go to first valid entry
   if not idx or idx > #items then
-    idx = next_valid(items, 1)
+    if wrap then
+      idx = next_valid(items, 1)
+    else
+      api.nvim_err_writeln("No more items")
+    end
   end
   if list == 'c' then
     cmd('cc ' .. idx)
