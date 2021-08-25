@@ -160,7 +160,7 @@ require 'qf'.setup {
         auto_open = true, -- Automatically open list on QuickFixCmdPost
         auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
         max_height = 8, -- Maximum height of location/quickfix list
-        min_height = 5, -- Minumum height of location/quickfix list
+        min_height = 5, -- Minimum height of location/quickfix list
         wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
         number = false, -- Show line numbers in list
         relativenumber = false, -- Show relative line numbers in list
@@ -177,7 +177,7 @@ require 'qf'.setup {
         auto_open = true, -- Automatically open list on QuickFixCmdPost
         auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
         max_height = 8, -- Maximum height of location/quickfix list
-        min_height = 5, -- Minumum height of location/quickfix list
+        min_height = 5, -- Minimum height of location/quickfix list
         wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
         number = false, -- Show line numbers in list
         relativenumber = false, -- Show relative line numbers in list

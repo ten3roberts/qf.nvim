@@ -12,7 +12,7 @@ local list_defaults = {
   auto_open = true, -- Automatically open list on QuickFixCmdPost
   auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
   max_height = 8, -- Maximum height of location/quickfix list
-  min_height = 5, -- Minumum height of location/quickfix list
+  min_height = 5, -- Minimum height of location/quickfix list
   wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
   number = false, -- Show line numbers in list
   relativenumber = false, -- Show relative line numbers in list
@@ -95,11 +95,11 @@ local function setup_autocmds(config)
     cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("l", true)')
   end
 
-  if c.auto_open then
-    cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
-  end
+  -- if c.auto_open then
+  --   cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
+  -- end
 
-  cmd('autocmd WinNew * :lua require"qf".reopen_all()')
+  -- cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
 
   cmd('autocmd QuitPre * :lua require"qf".close("loc")')
 
@@ -192,7 +192,9 @@ end
 -- Close and opens list if already open.
 -- This is to fix the list stretching bottom of a new vertical split.
 function M.reopen(list)
-  if vim.o.ft == 'qf' then
+  local prev = fn.win_getid(fn.winnr('#'))
+  if api.nvim_buf_get_option(api.nvim_win_get_buf(0), 'filetype') ~= 'qf' or api.nvim_buf_get_option(api.nvim_win_get_buf(prev), 'filetype') ~= 'qf' then
+    -- print'qf'
     return
   end
 
@@ -200,17 +202,20 @@ function M.reopen(list)
   local num_items = #list_items(list)
 
   if not M.list_visible(list) then
+    -- print 'not visible'
     return
   end
 
-  print("Reopening " .. list)
-  cmd('noau wincmd p | noau ' .. list .. 'close | ' .. list .. 'open ' .. get_height(list, num_items))
+  cmd('noau ' .. list .. 'close | noau ' .. list .. 'open ' .. get_height(list, num_items))
 
   M.on_ft()
+
+  cmd("noau wincmd p")
 end
 
 function M.reopen_all()
   local reopen = M.reopen
+  -- print("Reopening")
   reopen('c')
   reopen('l')
 end
@@ -278,18 +283,18 @@ function M.resize(list, stay, num_items)
   cmd(list .. "open " .. height )
 
   if stay then
-    cmd "noau wincmd p"
+    cmd "wincmd p"
   end
 end
 
 -- Open the `quickfix` or `location` list
 -- If stay == true, the list will not be focused
 -- If auto_close is true, the list will be closed if empty, similar to cwindow
-function M.open(list, stay, verbose)
+function M.open(list, stay, verbose, num_items)
   list = fix_list(list)
 
   local opts = M.config[list]
-  local num_items = #list_items(list)
+  num_items = num_items or #list_items(list)
 
   check_empty(list, num_items, verbose)
 
@@ -299,15 +304,9 @@ function M.open(list, stay, verbose)
       cmd(list .. 'close')
     else
       -- List is empty, but ensure it is properly sized
-      M.resize(list, true, num_items)
+      -- M.resize(list, true, num_items)
     end
     return
-  end
-
-  cmd(list .. 'open ' .. get_height(list, num_items))
-
-  if stay then
-    cmd "noau wincmd p"
   end
 
   if opts.close_other then
@@ -317,6 +316,13 @@ function M.open(list, stay, verbose)
       cmd 'cclose'
     end
   end
+
+  cmd(list .. 'open ' .. get_height(list, num_items))
+
+  if stay then
+    cmd "wincmd p"
+  end
+
 end
 
 -- Close list
@@ -689,22 +695,30 @@ end
 
 -- Set location or quickfix list items
 -- Invalidates follow cache
-function M.set(list, items)
+function M.set(list, items, title, winid)
   list = fix_list(list)
 
   if list == 'c' then
-    fn.setqflist(items)
+    vim.fn.setqflist({}, 'r', {
+      title = title or '',
+      items = items;
+    })
   else
-    fn.setloclist('.', items)
+    vim.fn.setloclist(winid or 0, {}, 'r', {
+      title = title or '',
+      items = items;
+    })
   end
 
   local opts = M.config[list]
   opts.last_line = nil
 
-  if #items == 0 and opts.auto_close then
+  if #items == 0 and opts.auto_close  then
     M.close(list)
+  -- elseif M.list_visible(list) then
+  --   M.resize(list, true, #items)
   elseif opts.auto_open then
-    M.open(list, true)
+    M.open(list, true, #items)
   end
 end
 
