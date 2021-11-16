@@ -95,15 +95,19 @@ local function setup_autocmds(config)
     cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("l", true)')
   end
 
-  -- if c.auto_open then
-  --   cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
-  -- end
+  if c.auto_open then
+    cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
+  end
 
   -- cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
 
   cmd('autocmd QuitPre * :lua require"qf".close("loc")')
 
   cmd 'augroup END'
+end
+
+local function istrue(val)
+  return val == true or val == '1'
 end
 
 function M.setup(config)
@@ -115,7 +119,7 @@ function M.setup(config)
 end
 
 local function printv(msg, verbose)
-  if verbose ~= false then print(msg) end
+  if istrue(verbose) ~= false then print(msg) end
 end
 
 local function check_empty(list, num_items, verbose)
@@ -250,7 +254,6 @@ function M.on_ft(winid)
   bo.buflisted = false
   wo.number = opts.number
   wo.relativenumber = opts.relativenumber
-  wo.winfixheight = true
 
   if opts.auto_resize then
     cmd('resize ' .. get_height(list))
@@ -282,7 +285,7 @@ function M.resize(list, stay, num_items)
 
   cmd(list .. "open " .. height )
 
-  if stay then
+  if istrue(stay) then
     cmd "wincmd p"
   end
 end
@@ -319,10 +322,9 @@ function M.open(list, stay, verbose, num_items)
 
   cmd(list .. 'open ' .. get_height(list, num_items))
 
-  if stay then
+  if istrue(stay) then
     cmd "wincmd p"
   end
-
 end
 
 -- Close list
@@ -488,9 +490,9 @@ function M.follow(list, strategy, limit)
   clear_prompt()
   -- Select found entry
   if list == 'c' then
-    cmd('cc ' .. i)
+    cmd(':keepjumps cc ' .. i)
   else
-    cmd('ll ' .. i)
+    cmd(':keepjumps ll ' .. i)
   end
 
   fn.setpos('.', pos)
@@ -498,7 +500,7 @@ end
 
 -- Wrapping version of [lc]next. Also takes into account valid entries.
 -- If wrap is nil or true, it will wrap around the list
-function M.next(list, verbose, wrap)
+function M.next(list, wrap, verbose)
   if wrap == nil then
     wrap = true
   end
@@ -517,7 +519,7 @@ end
 
 -- Wrapping version of [lc]prev. Also takes into account valid entries.
 -- If wrap is nil or true, it will wrap around the list
-function M.prev(list, verbose, wrap)
+function M.prev(list, wrap, verbose)
   if wrap == nil then
     wrap = true
   end
@@ -563,7 +565,7 @@ end
 
 -- Wrapping version of [lc]above
 -- Will switch buffer
-function M.above(list, verbose, wrap)
+function M.above(list, wrap, verbose)
   if wrap == nil then
     wrap = true
   end
@@ -605,7 +607,7 @@ end
 
 -- Wrapping version of [lc]below
 -- Will switch buffer
-function M.below(list, verbose, wrap)
+function M.below(list, wrap, verbose)
   if wrap == nil then
     wrap = true
   end
