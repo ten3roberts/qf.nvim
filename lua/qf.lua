@@ -145,7 +145,7 @@ local function fix_list(list)
   end
 
   if list == 'visible' then
-    if M.list_visible('l') then
+    if M.get_list_win('l') then
       return 'l'
     else
       return 'c'
@@ -155,42 +155,39 @@ local function fix_list(list)
   return nil
 end
 
-function M.list_visible(list)
+function M.get_list_win(list)
   list = fix_list(list)
   local tabnr = fn.tabpagenr()
   if list == 'c' then
-    return #vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo()) > 0
+    return vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo())[1]
   else
-    return vim.fn.getloclist(0, { winid = 0 })['winid'] ~= 0
+    return vim.fn.getloclist(0, { winid = 0 })['winid']
   end
 end
 
 local function list_items(list)
   if list == 'c' then
-    return fn.getqflist()
+    return vim.tbl_filter(function(v) return v.valid == 1 end, fn.getqflist())
   else
-    return fn.getloclist('.')
+    return vim.tbl_filter(function(v) return v.valid == 1 end, fn.getloclist('.'))
   end
 end
 
-local function get_height(list, num_items)
+local function get_height(list)
   local opts = M.config[list]
 
   if opts.auto_resize == false then
     return opts.max_height
   end
 
-  num_items = num_items or #list_items(list)
-
-  return math.max(math.min(num_items, opts.max_height), opts.min_height)
-end
-
--- Same as resize, but does nothing if auto_resize is off
-function M.checked_auto_resize(list, stay)
-  list = fix_list(list)
-  if M.config[list].auto_resize then
-    M.resize(list, stay)
+  local size = 0
+  if list == 'c' then
+    size = fn.getqflist({ size = 1 }).size
+  else
+    size = fn.getloclist('.', { size = 1 }).size
   end
+
+  return math.max(math.min(size, opts.max_height), opts.min_height)
 end
 
 -- Close and opens list if already open.
@@ -203,14 +200,12 @@ function M.reopen(list)
   end
 
   list = fix_list(list)
-  local num_items = #list_items(list)
 
-  if not M.list_visible(list) then
-    -- print 'not visible'
+  if not M.get_list_win(list) then
     return
   end
 
-  cmd('noau ' .. list .. 'close | noau ' .. list .. 'open ' .. get_height(list, num_items))
+  cmd('noau ' .. list .. 'close | noau ' .. list .. 'open ' .. get_height(list))
 
   M.on_ft()
 
@@ -219,9 +214,16 @@ end
 
 function M.reopen_all()
   local reopen = M.reopen
-  -- print("Reopening")
   reopen('c')
   reopen('l')
+end
+
+local function set_entry(list, idx)
+  if list == 'c' then
+    fn.setqflist({}, "r", { idx = idx })
+  else
+    fn.setloclist(".", {}, "r", { idx = idx })
+  end
 end
 
 -- Setup qf filetype specific options
@@ -231,11 +233,8 @@ function M.on_ft(winid)
   local list = nil
 
   if not wininfo or not wininfo[1] then
-    print("Not a quickfix list")
     return
   end
-
-  -- print(vim.inspect(wininfo))
 
   if wininfo[1].quickfix == 1 then
     list = 'c'
@@ -256,7 +255,7 @@ function M.on_ft(winid)
   wo.relativenumber = opts.relativenumber
 
   if opts.auto_resize then
-    cmd('resize ' .. get_height(list))
+    api.nvim_win_set_height(winid, get_height(list))
   end
 
   if opts.wide then
@@ -266,48 +265,42 @@ end
 
 -- Resize list to the number of items between max and min height
 -- If stay, the list will not be focused.
--- num_items can be provided if number of items are already none, if nil, they will be queried
-function M.resize(list, stay, num_items)
+function M.resize(list)
   list = fix_list(list)
 
   local opts = M.config[list]
 
+  local win = M.get_list_win(list)
+
   -- Don't do anything if list isn't open
-  if not M.list_visible(list) then
+  if not win or win == 0 then
     return
   end
 
-  local height = get_height(list, num_items)
-
-  if height == 0 and opts.auto_close() then
-    cmd (list .. 'close')
-  end
-
-  cmd(list .. "open " .. height )
-
-  if istrue(stay) then
-    cmd "wincmd p"
+  local height = get_height(list)
+  if height ~= 0 then
+    api.nvim_win_set_height(win, height)
+  elseif opts.auto_close() then
+    cmd(list .. 'close')
   end
 end
 
--- Open the `quickfix` or `location` list
--- If stay == true, the list will not be focused
--- If auto_close is true, the list will be closed if empty, similar to cwindow
-function M.open(list, stay, verbose, num_items)
+--- Open the `quickfix` or `location` list
+--- If stay == true, the list will not be focused
+--- If auto_close is true, the list will be closed if empty, similar to cwindow
+--- @param list string
+--- @param stay boolean
+function M.open(list, stay)
   list = fix_list(list)
 
   local opts = M.config[list]
-  num_items = num_items or #list_items(list)
-
-  check_empty(list, num_items, verbose)
+  local num_items = #list_items(list)
 
   -- Auto close
   if num_items == 0 then
     if opts.auto_close then
       cmd(list .. 'close')
-    else
-      -- List is empty, but ensure it is properly sized
-      -- M.resize(list, true, num_items)
+      return
     end
     return
   end
@@ -320,14 +313,17 @@ function M.open(list, stay, verbose, num_items)
     end
   end
 
-  cmd(list .. 'open ' .. get_height(list, num_items))
+  if M.get_list_win(list) ~= 0 then
+    return
+  end
+  cmd(list .. 'open ' .. get_height(list))
 
   if istrue(stay) then
     cmd "wincmd p"
   end
 end
 
--- Close list
+--- Close list
 function M.close(list)
   list = fix_list(list)
 
@@ -336,10 +332,12 @@ end
 
 -- Toggle list
 -- If stay == true, the list will not be focused
+--- @param list string
+--- @param stay boolean
 function M.toggle(list, stay)
   list = fix_list(list)
 
-  if M.list_visible(list) then
+  if M.get_list_win(list) then
     M.close(list)
   else
     M.open(list, stay)
@@ -347,8 +345,10 @@ function M.toggle(list, stay)
 
 end
 
--- Clears the quickfix or current location list
--- If name is not nil, the current list will be saved before being cleared
+--- Clears the quickfix or current location list
+--- If name is not nil, the current list will be saved before being cleared
+--- @param list string
+--- @param name string
 function M.clear(list, name)
   list = fix_list(list)
 
@@ -434,12 +434,12 @@ local strategy_lookup = {
   nearest = follow_nearest,
 }
 
--- strategy is one of the following:
--- - 'prev'
--- - 'next'
--- - 'nearest'
--- (optional) limit, don't select entry further away than limit.
--- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
+--- strategy is one of the following:
+--- - 'prev'
+--- - 'next'
+--- - 'nearest'
+--- (optional) limit, don't select entry further away than limit.
+--- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
 function M.follow(list, strategy, limit)
   if api.nvim_get_mode().mode ~= 'n' then
     return
@@ -489,11 +489,7 @@ function M.follow(list, strategy, limit)
   -- Clear echo area
   clear_prompt()
   -- Select found entry
-  if list == 'c' then
-    cmd(':keepjumps cc ' .. i)
-  else
-    cmd(':keepjumps ll ' .. i)
-  end
+  set_entry(list, i)
 
   fn.setpos('.', pos)
 end
@@ -695,33 +691,53 @@ function M.load(list, name)
   end
 end
 
--- Set location or quickfix list items
--- Invalidates follow cache
-function M.set(list, items, title, winid)
+--- Set location or quickfix list items
+--- If a compiler is given, the items will be parsed from it
+--- Invalidates follow cache
+--- @param list string
+--- @param items table
+--- @param title string
+--- @param winid integer|nil
+--- @param compiler string
+function M.set(list, items, title, winid, compiler)
   list = fix_list(list)
+
+  local old_c = vim.b.current_compiler;
+
+  local old_efm = vim.opt.efm
+
+  local old_makeprg = vim.o.makeprg
+
+  if compiler ~= nil then
+    vim.cmd("compiler! " .. compiler)
+  end
 
   if list == 'c' then
     vim.fn.setqflist({}, 'r', {
       title = title or '',
-      items = items;
+      items = not compiler and items,
+      lines = compiler and items
     })
   else
     vim.fn.setloclist(winid or 0, {}, 'r', {
       title = title or '',
-      items = items;
+      items = not compiler and items,
+      lines = compiler and items
     })
   end
+
+  vim.b.current_compiler = old_c
+  vim.opt.efm = old_efm
+  vim.o.makeprg = old_makeprg
+  if old_c ~= nil then
+    vim.cmd("compiler " .. old_c)
+  end
+
 
   local opts = M.config[list]
   opts.last_line = nil
 
-  if #items == 0 and opts.auto_close  then
-    M.close(list)
-  -- elseif M.list_visible(list) then
-  --   M.resize(list, true, #items)
-  elseif opts.auto_open then
-    M.open(list, true, #items)
-  end
+  M.open(list)
 end
 
 return M

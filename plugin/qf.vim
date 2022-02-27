@@ -46,12 +46,18 @@ command! -nargs=* Lnext   lua require'qf'.next('l', <q-args>)
 " Move to the previous item in quickfix list.
 " Second argument denotes wrap>
 command! -nargs=* Lprev   lua require'qf'.prev('l', <q-args>)
-" Move to the previous item in quickfix list.
+" Move to the previous item in the location list.
 " Second argument denotes wrap>
 command! -nargs=* Labove  lua require'qf'.above('l', <q-args>)
-" Move to the previous item in quickfix list.
+" Move to the previous item in the location list.
 " Second argument denotes wrap>
 command! -nargs=* Lbelow  lua require'qf'.below('l', <q-args>)
+" Move to the previous item in visible list.
+" Second argument denotes wrap>
+command! -nargs=* Vabove  lua require'qf'.above('visible', <q-args>)
+" Move to the previous item in visible list.
+" Second argument denotes wrap>
+command! -nargs=* Vbelow  lua require'qf'.below('visible', <q-args>)
 
 " Save the quickfix list
 command! -nargs=* Lsave   lua require'qf'.save('l', <q-args>)
@@ -59,5 +65,3 @@ command! -nargs=* Lsave   lua require'qf'.save('l', <q-args>)
 command! -nargs=* Lload   lua require'qf'.load('l', <q-args>)
 " Set the item in quickfix list
 command! -nargs=* Lset    lua require'qf'.below('l', <q-args>)
-
-
