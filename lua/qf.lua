@@ -145,7 +145,7 @@ local function fix_list(list)
   end
 
   if list == 'visible' then
-    if M.get_list_win('l') then
+    if M.get_list_win('l') ~= 0 and false then
       return 'l'
     else
       return 'c'
@@ -159,9 +159,9 @@ function M.get_list_win(list)
   list = fix_list(list)
   local tabnr = fn.tabpagenr()
   if list == 'c' then
-    return vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo())[1]
+    return vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo())[1] or 0
   else
-    return vim.fn.getloclist(0, { winid = 0 })['winid']
+    return vim.fn.getloclist(0, { winid = 0 })['winid'] or 0
   end
 end
 
@@ -273,7 +273,7 @@ function M.resize(list)
   local win = M.get_list_win(list)
 
   -- Don't do anything if list isn't open
-  if not win or win == 0 then
+  if win == 0 then
     return
   end
 
@@ -295,6 +295,7 @@ function M.open(list, stay)
 
   local opts = M.config[list]
   local num_items = #list_items(list)
+  print(num_items)
 
   -- Auto close
   if num_items == 0 then
@@ -374,7 +375,7 @@ local function follow_prev(items, bufnr, line)
   local i = 1
   local last_valid = 1
   for _,item in ipairs(items) do
-    if item.valid == 1 and item.bufnr == bufnr then
+    if item.valid == 1 and item.lnum ~= 0 and item.bufnr == bufnr then
       last_valid = i
       if item.lnum > line then
         return math.max(i - 1, 1)
@@ -392,7 +393,7 @@ local function follow_next(items, bufnr, line)
   local i = 1
   local last_valid = 1
   for _,item in ipairs(items) do
-    if item.valid == 1 and item.bufnr == bufnr then
+    if item.valid == 1 and item.lnum ~= 0 and item.bufnr == bufnr then
       last_valid = i
       if item.lnum > line then
         return i
@@ -412,7 +413,7 @@ local function follow_nearest(items, bufnr, line)
   local min_i = nil
 
   for _,item in ipairs(items) do
-    if items.valid == 1 and item.bufnr == bufnr then
+    if item.valid == 1 and item.lnum ~= 0 and item.bufnr == bufnr then
       local dist = math.abs(item.lnum - line)
 
       if min == nil or dist < min then
