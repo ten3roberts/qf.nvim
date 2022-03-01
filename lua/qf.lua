@@ -145,7 +145,7 @@ local function fix_list(list)
   end
 
   if list == 'visible' then
-    if M.get_list_win('l') ~= 0 and false then
+    if M.get_list_win('l') ~= 0 then
       return 'l'
     else
       return 'c'
@@ -159,7 +159,8 @@ function M.get_list_win(list)
   list = fix_list(list)
   local tabnr = fn.tabpagenr()
   if list == 'c' then
-    return vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo())[1] or 0
+    local w = vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo())[1]
+    if w then return w.winid else return 0 end
   else
     return vim.fn.getloclist(0, { winid = 0 })['winid'] or 0
   end
@@ -314,7 +315,11 @@ function M.open(list, stay)
     end
   end
 
-  if M.get_list_win(list) ~= 0 then
+  local win = M.get_list_win(list)
+  if win ~= 0 then
+    if not istrue(stay) then
+      api.nvim_set_current_win(win)
+    end
     return
   end
   cmd(list .. 'open ' .. get_height(list))
@@ -338,7 +343,7 @@ end
 function M.toggle(list, stay)
   list = fix_list(list)
 
-  if M.get_list_win(list) then
+  if M.get_list_win(list) ~= 0 then
     M.close(list)
   else
     M.open(list, stay)
