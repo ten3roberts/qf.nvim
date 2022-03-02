@@ -28,6 +28,12 @@ local defaults = {
 
 local M = { config = defaults }
 
+local util = require("qf.utils")
+
+local fix_list = util.fix_list
+local list_items = util.list_items
+local get_height = util.get_height
+
 local post_commands = {
   'make', 'grep', 'grepadd', 'vimgrep', 'vimgrepadd',
   'cfile', 'cgetfile', 'caddfile', 'cexpr', 'cgetexpr',
@@ -135,62 +141,6 @@ local function check_empty(list, num_items, verbose)
   return true
 end
 
-local function fix_list(list)
-  list = list or 'c'
-
-  if list == 'qf' or list == 'quickfix' or list == 'c' then
-    return 'c'
-  elseif list == 'loc' or list == 'location' or list == 'l' then
-    return 'l'
-  end
-
-  if list == 'visible' then
-    if M.get_list_win('l') ~= 0 then
-      return 'l'
-    else
-      return 'c'
-    end
-  end
-  api.nvim_err_writeln("Invalid list type: " .. list)
-  return nil
-end
-
-function M.get_list_win(list)
-  list = fix_list(list)
-  local tabnr = fn.tabpagenr()
-  if list == 'c' then
-    local w = vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo())[1]
-    if w then return w.winid else return 0 end
-  else
-    return vim.fn.getloclist(0, { winid = 0 })['winid'] or 0
-  end
-end
-
-local function list_items(list)
-  if list == 'c' then
-    return vim.tbl_filter(function(v) return v.valid == 1 end, fn.getqflist())
-  else
-    return vim.tbl_filter(function(v) return v.valid == 1 end, fn.getloclist('.'))
-  end
-end
-
-local function get_height(list)
-  local opts = M.config[list]
-
-  if opts.auto_resize == false then
-    return opts.max_height
-  end
-
-  local size = 0
-  if list == 'c' then
-    size = fn.getqflist({ size = 1 }).size
-  else
-    size = fn.getloclist('.', { size = 1 }).size
-  end
-
-  return math.max(math.min(size, opts.max_height), opts.min_height)
-end
-
 -- Close and opens list if already open.
 -- This is to fix the list stretching bottom of a new vertical split.
 function M.reopen(list)
@@ -202,11 +152,11 @@ function M.reopen(list)
 
   list = fix_list(list)
 
-  if not M.get_list_win(list) then
+  if not util.get_list_win(list) then
     return
   end
 
-  cmd('noau ' .. list .. 'close | noau ' .. list .. 'open ' .. get_height(list))
+  cmd('noau ' .. list .. 'close | noau ' .. list .. 'open ' .. get_height(list, M.config))
 
   M.on_ft()
 
@@ -256,7 +206,7 @@ function M.on_ft(winid)
   wo.relativenumber = opts.relativenumber
 
   if opts.auto_resize then
-    api.nvim_win_set_height(winid, get_height(list))
+    api.nvim_win_set_height(winid, get_height(list, M.config))
   end
 
   if opts.wide then
@@ -271,14 +221,14 @@ function M.resize(list)
 
   local opts = M.config[list]
 
-  local win = M.get_list_win(list)
+  local win = util.get_list_win(list)
 
   -- Don't do anything if list isn't open
   if win == 0 then
     return
   end
 
-  local height = get_height(list)
+  local height = get_height(list, M.config)
   if height ~= 0 then
     api.nvim_win_set_height(win, height)
   elseif opts.auto_close() then
@@ -315,14 +265,14 @@ function M.open(list, stay)
     end
   end
 
-  local win = M.get_list_win(list)
+  local win = util.get_list_win(list)
   if win ~= 0 then
     if not istrue(stay) then
       api.nvim_set_current_win(win)
     end
     return
   end
-  cmd(list .. 'open ' .. get_height(list))
+  cmd(list .. 'open ' .. get_height(list, M.config))
 
   if istrue(stay) then
     cmd "wincmd p"
@@ -343,7 +293,7 @@ end
 function M.toggle(list, stay)
   list = fix_list(list)
 
-  if M.get_list_win(list) ~= 0 then
+  if util.get_list_win(list) ~= 0 then
     M.close(list)
   else
     M.open(list, stay)
@@ -743,7 +693,25 @@ function M.set(list, items, title, winid, compiler)
   local opts = M.config[list]
   opts.last_line = nil
 
-  M.open(list)
+  M.open(list, true)
+end
+
+--- @class Filter
+--- @field type string|nil
+--- @field text string|nil
+
+--- Filter and keep items in a list based on predicate
+--- @param list string
+--- @param filter Filter
+function M.keep(list, filter)
+  list = fix_list(list);
+  local items = vim.tbl_filter(function(v)
+    return
+    (filter.type == nil or filter.type == v.type) and
+    (filter.text == nil or v.text:find(filter.text))
+  end, list_items(list))
+
+  M.set(list, items)
 end
 
 return M

@@ -65,3 +65,7 @@ command! -nargs=* Lsave   lua require'qf'.save('l', <q-args>)
 command! -nargs=* Lload   lua require'qf'.load('l', <q-args>)
 " Set the item in quickfix list
 command! -nargs=* Lset    lua require'qf'.below('l', <q-args>)
+
+command! -nargs=1 LKeepType lua require'qf'.keep('l', { type = <q-args> })
+command! -nargs=1 QKeepType lua require'qf'.keep('c', { type = <q-args> })
+command! -nargs=1 VKeepType lua require'qf'.keep('visible', { type = <q-args> })
