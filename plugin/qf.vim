@@ -69,3 +69,7 @@ command! -nargs=* Lset    lua require'qf'.below('l', <q-args>)
 command! -nargs=1 LKeepType lua require'qf'.keep('l', { type = <q-args> })
 command! -nargs=1 QKeepType lua require'qf'.keep('c', { type = <q-args> })
 command! -nargs=1 VKeepType lua require'qf'.keep('visible', { type = <q-args> })
+
+command! -nargs=1 LKeepText lua require'qf'.keep('l', { text = <q-args> })
+command! -nargs=1 QKeepText lua require'qf'.keep('c', { text = <q-args> })
+command! -nargs=1 VKeepText lua require'qf'.keep('visible', { type = <q-args> })
