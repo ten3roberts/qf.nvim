@@ -58,4 +58,41 @@ function M.get_height(list, config)
   return math.max(math.min(size, opts.max_height), opts.min_height)
 end
 
+local diagnostic_severities = {
+  E = { hl = '%#Error#',   type = 'E', kind = 'error',   sign = ''};
+  W = { hl = '%#Warning#', type = 'W', kind = 'warning', sign = ''};
+  I = { hl = '%#Info#',    type = 'I', kind = 'info',    sign = ''};
+  N = { hl = '%#Hint#',    type = 'H', kind = 'hint',    sign = ''};
+}
+
+function M.tally(list)
+  -- Tally
+  local E = 0
+  local W = 0
+  local I = 0
+  local N = 0
+
+  for _,v in ipairs(M.list_items(list, true)) do
+    if v.type == "E" then
+      E = E + 1
+    elseif v.type == "E" then
+      W = W + 1
+    elseif v.type == "I" then
+      I = I + 1
+    elseif v.type == "N" then
+      N = N + 1
+    end
+  end
+
+  local tally = { E = E, W = W, I = I, N = N }
+  local t = {}
+  for i,v in ipairs(tally) do
+    if v > 0 then
+      local severity = diagnostic_severities[i]
+      t[#t+1] = severity.hl .. severity.sign .. ' ' .. v .. ' '
+    end
+  end
+  return table.concat(t, " | ")
+end
+
 return M

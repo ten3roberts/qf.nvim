@@ -246,7 +246,6 @@ function M.open(list, stay)
 
   local opts = M.config[list]
   local num_items = #list_items(list)
-  print(num_items)
 
   -- Auto close
   if num_items == 0 then
@@ -446,8 +445,6 @@ function M.follow(list, strategy, limit)
   clear_prompt()
   -- Select found entry
   set_entry(list, i)
-
-  fn.setpos('.', pos)
 end
 
 -- Wrapping version of [lc]next. Also takes into account valid entries.
@@ -647,15 +644,21 @@ function M.load(list, name)
   end
 end
 
+--- @class set_opts
+--- @field items table
+--- @field lines table
+--- @field compiler string|nil
+--- @field winid number|nil
+--- @field title string|nil
+--- @field tally boolean|nil
+--- @field open boolean
+
 --- Set location or quickfix list items
 --- If a compiler is given, the items will be parsed from it
 --- Invalidates follow cache
 --- @param list string
---- @param items table
---- @param title string
---- @param winid integer|nil
---- @param compiler string
-function M.set(list, items, title, winid, compiler)
+--- @param opts set_opts
+function M.set(list, opts)
   list = fix_list(list)
 
   local old_c = vim.b.current_compiler;
@@ -664,21 +667,22 @@ function M.set(list, items, title, winid, compiler)
 
   local old_makeprg = vim.o.makeprg
 
-  if compiler ~= nil then
-    vim.cmd("compiler! " .. compiler)
+  if opts.compiler ~= nil then
+    vim.cmd("compiler! " .. opts.compiler)
   end
 
   if list == 'c' then
     vim.fn.setqflist({}, 'r', {
-      title = title or '',
-      items = not compiler and items,
-      lines = compiler and items
+      title = opts.title,
+      items = opts.items,
+      lines = opts.lines
     })
   else
-    vim.fn.setloclist(winid or 0, {}, 'r', {
-      title = title or '',
-      items = not compiler and items,
-      lines = compiler and items
+    vim.fn.setloclist(opts.winid or 0, {}, 'r', {
+      title = opts.title,
+      items = opts.items,
+      lines = opts.lines,
+      tally = true
     })
   end
 
@@ -689,11 +693,21 @@ function M.set(list, items, title, winid, compiler)
     vim.cmd("compiler " .. old_c)
   end
 
+  local title = (opts.title or '') .. util.tally(list)
 
-  local opts = M.config[list]
-  opts.last_line = nil
+  if list == 'c' then
+    vim.fn.setqflist({}, "r", { title = title  })
+  else
+    vim.fn.setloclist(".", {}, "r", { title = title  })
+  end
 
-  M.open(list, true)
+  M.config[list].last_line = nil
+
+  if opts.open ~= false then
+    M.open(list, true)
+  else
+    M.close(list)
+  end
 end
 
 --- @class Filter
@@ -711,7 +725,7 @@ function M.keep(list, filter)
     (filter.text == nil or v.text:find(filter.text))
   end, list_items(list))
 
-  M.set(list, items)
+  M.set(list, { items = items, open = true})
 end
 
 return M
