@@ -324,12 +324,14 @@ local function clear_prompt()
   vim.api.nvim_command('normal :esc<CR>')
 end
 
+local is_valid = util.is_valid
+
 -- Returns the list entry currently previous to the cursor
 local function follow_prev(items, bufnr, line)
   local i = 1
   local last_valid = 1
   for _,item in ipairs(items) do
-    if item.valid == 1 and item.lnum ~= 0 and item.bufnr == bufnr then
+    if is_valid(item) then
       last_valid = i
       if item.lnum > line then
         return math.max(i - 1, 1)
@@ -347,7 +349,7 @@ local function follow_next(items, bufnr, line)
   local i = 1
   local last_valid = 1
   for _,item in ipairs(items) do
-    if item.valid == 1 and item.lnum ~= 0 and item.bufnr == bufnr then
+    if is_valid(item) then
       last_valid = i
       if item.lnum > line then
         return i
@@ -367,7 +369,7 @@ local function follow_nearest(items, bufnr, line)
   local min_i = nil
 
   for _,item in ipairs(items) do
-    if item.valid == 1 and item.lnum ~= 0 and item.bufnr == bufnr then
+    if is_valid(item) then
       local dist = math.abs(item.lnum - line)
 
       if min == nil or dist < min then
@@ -485,10 +487,6 @@ function M.prev(list, wrap, verbose)
   end
 end
 
--- Returns true if the current item is valid by having valid == 1 and a valid bufnr and line number
-local function is_valid(item)
-  return item.valid == 1 and item.bufnr ~= 0
-end
 
 local function prev_valid(items, idx)
   while idx and idx > 0 do

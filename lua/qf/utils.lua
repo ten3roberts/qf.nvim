@@ -22,6 +22,13 @@ function M.fix_list(list)
   return nil
 end
 
+-- Returns true if the current item is valid by having valid == 1 and a valid bufnr and line number
+local function is_valid(item)
+  return item.bufnr ~= 0 and item.lnum ~= 0
+end
+
+M.is_valid = is_valid
+
 function M.get_list_win(list)
   list = M.fix_list(list)
   local tabnr = fn.tabpagenr()
@@ -35,9 +42,9 @@ end
 
 function M.list_items(list, all)
   if list == 'c' then
-    return vim.tbl_filter(function(v) return v.valid == 1 or all end, fn.getqflist())
+    return vim.tbl_filter(function(v) return is_valid or all end, fn.getqflist())
   else
-    return vim.tbl_filter(function(v) return v.valid == 1 or all end, fn.getloclist('.'))
+    return vim.tbl_filter(function(v) return is_valid or all end, fn.getloclist('.'))
   end
 end
 
