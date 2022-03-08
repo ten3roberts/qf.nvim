@@ -202,6 +202,7 @@ function M.on_ft(winid)
   local opts = M.config[list]
 
   bo.buflisted = false
+  wo.winfixheight = true
   wo.number = opts.number
   wo.relativenumber = opts.relativenumber
 
