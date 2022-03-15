@@ -177,6 +177,14 @@ local function set_entry(list, idx)
   end
 end
 
+local function current_entry(list)
+  if list == 'c' then
+    return fn.getqflist({}, "r", { idx = 1 }).idx
+  else
+    return fn.getloclist(".", {}, "r", { idx = 1 }).idx
+  end
+end
+
 -- Setup qf filetype specific options
 function M.on_ft(winid)
   winid = winid or fn.win_getid()
@@ -334,8 +342,8 @@ local function follow_prev(items, bufnr, line)
   for _,item in ipairs(items) do
     if is_valid(item) then
       last_valid = i
-      if item.lnum > line then
-        return math.max(i - 1, 1)
+      if item.lnum < line and item.bufnr == bufnr then
+        return i
       end
     end
 
@@ -352,7 +360,7 @@ local function follow_next(items, bufnr, line)
   for _,item in ipairs(items) do
     if is_valid(item) then
       last_valid = i
-      if item.lnum > line then
+      if item.lnum > line and item.bufnr == bufnr then
         return i
       end
     end
@@ -529,7 +537,7 @@ function M.above(list, wrap, verbose)
   local bufnr = fn.bufnr('%')
   local line = fn.line('.')
 
-  local idx = prev_valid(items, follow_next(items, bufnr, line - 1) - 1)
+  local idx = follow_prev(items, bufnr, line)
 
   -- Go to last valid entry
   if idx == 0 then
@@ -570,7 +578,7 @@ function M.below(list, wrap, verbose)
   local bufnr = fn.bufnr('%')
   local line = fn.line('.')
 
-  local idx = next_valid(items, follow_prev(items, bufnr, line) + 1)
+  local idx = follow_next(items, bufnr, line)
 
   -- Go to first valid entry
   if not idx or idx > #items then
