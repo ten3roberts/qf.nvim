@@ -337,17 +337,17 @@ local is_valid = util.is_valid
 
 -- Returns the list entry currently previous to the cursor
 local function follow_prev(items, bufnr, line)
-  local i = 1
   local last_valid = 1
-  for _,item in ipairs(items) do
+  for i=1,#items do
+    local j = #items - i + 1
+    local item = items[j]
+
     if is_valid(item) then
-      last_valid = i
-      if item.lnum < line and item.bufnr == bufnr then
-        return i
+      last_valid = j
+      if item.lnum <= line and item.bufnr == bufnr then
+        return j
       end
     end
-
-    i = i + 1
   end
 
   return last_valid
@@ -360,7 +360,7 @@ local function follow_next(items, bufnr, line)
   for _,item in ipairs(items) do
     if is_valid(item) then
       last_valid = i
-      if item.lnum > line and item.bufnr == bufnr then
+      if item.lnum >= line and item.bufnr == bufnr then
         return i
       end
     end
@@ -498,25 +498,46 @@ end
 
 
 local function prev_valid(items, idx)
-  while idx and idx > 0 do
-    if is_valid(items[idx]) then
-      break
-    end
+  while idx and idx > 1 do
     idx = idx - 1
+    if is_valid(items[idx]) then
+      return idx
+    end
   end
 
   return idx
 end
 
-local function next_valid(items, idx)
-  while idx and idx <= #items do
+local function prev_valid_wrap(items, start)
+  for i=1,#items do
+    local idx = (#items + start - i - 1) % #items + 1
     if is_valid(items[idx]) then
-      break
+      return idx
     end
+  end
+  return 1
+end
+
+local function next_valid_wrap(items, start)
+  for i=1,#items do
+    local idx = (i + start - 1) % #items + 1
+    if is_valid(items[idx]) then
+      return idx
+    end
+  end
+  return 1
+end
+
+local function next_valid(items, idx)
+  while idx and idx <= #items - 1 do
     idx = idx + 1
+    if is_valid(items[idx]) then
+      return idx
+    end
   end
 
-  return idx
+  api.nvim_err_writeln("No more items")
+  return nil
 end
 
 -- Wrapping version of [lc]above
@@ -537,16 +558,13 @@ function M.above(list, wrap, verbose)
   local bufnr = fn.bufnr('%')
   local line = fn.line('.')
 
-  local idx = follow_prev(items, bufnr, line)
+  local idx = follow_next(items, bufnr, line)
 
   -- Go to last valid entry
-  if idx == 0 then
-    if wrap then
-      idx = prev_valid(items, #items)
-    else
-      api.nvim_err_writeln("No more items")
-      return
-    end
+  if wrap then
+    idx = prev_valid_wrap(items, idx)
+  else
+    idx = prev_valid(items, idx)
   end
 
   -- No valid entries, go to first.
@@ -578,16 +596,15 @@ function M.below(list, wrap, verbose)
   local bufnr = fn.bufnr('%')
   local line = fn.line('.')
 
-  local idx = follow_next(items, bufnr, line)
+  local idx = follow_prev(items, bufnr, line)
 
   -- Go to first valid entry
-  if not idx or idx > #items then
-    if wrap then
-      idx = next_valid(items, 1)
-    else
-      api.nvim_err_writeln("No more items")
-    end
+  if wrap then
+    idx = next_valid_wrap(items, idx)
+  else
+    idx = next_valid(items, idx)
   end
+
   if list == 'c' then
     cmd('cc ' .. idx)
   else
