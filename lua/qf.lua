@@ -671,6 +671,7 @@ end
 --- @class set_opts
 --- @field items table
 --- @field lines table
+--- @field cwd string
 --- @field compiler string|nil
 --- @field winid number|nil
 --- @field title string|nil
@@ -690,6 +691,11 @@ function M.set(list, opts)
   local old_efm = vim.opt.efm
 
   local old_makeprg = vim.o.makeprg
+  local old_cwd = fn.getcwd()
+
+  if opts.cwd then
+    api.nvim_set_current_dir(opts.cwd)
+  end
 
   if opts.compiler ~= nil then
     vim.cmd("compiler! " .. opts.compiler)
@@ -726,6 +732,10 @@ function M.set(list, opts)
   end
 
   M.config[list].last_line = nil
+
+  if opts.cwd then
+    api.nvim_set_current_dir(old_cwd)
+  end
 
   if opts.open ~= false then
     M.open(list, true)
