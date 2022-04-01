@@ -170,11 +170,8 @@ function M.reopen_all()
 end
 
 local function set_entry(list, idx)
-  if list == 'c' then
-    fn.setqflist({}, "r", { idx = idx })
-  else
-    fn.setloclist(".", {}, "r", { idx = idx })
-  end
+  local win = util.get_list_win(list)
+  vim.api.nvim_win_set_cursor(win, { idx, 0})
 end
 
 local function current_entry(list)
