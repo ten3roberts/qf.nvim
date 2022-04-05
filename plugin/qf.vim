@@ -73,3 +73,7 @@ command! -nargs=1 VKeepType lua require'qf'.keep('visible', { type = <q-args> })
 command! -nargs=1 LKeepText lua require'qf'.keep('l', { text = <q-args> })
 command! -nargs=1 QKeepText lua require'qf'.keep('c', { text = <q-args> })
 command! -nargs=1 VKeepText lua require'qf'.keep('visible', { type = <q-args> })
+
+command! -nargs=0 LSort lua require'qf'.sort('l')
+command! -nargs=0 QSort lua require'qf'.sort('c')
+command! -nargs=0 VSort lua require'qf'.sort('visible')

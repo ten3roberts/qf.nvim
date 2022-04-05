@@ -24,7 +24,7 @@ end
 
 -- Returns true if the current item is valid by having valid == 1 and a valid bufnr and line number
 local function is_valid(item)
-  return item.bufnr ~= 0 and item.lnum ~= 0
+  return item.bufnr ~= 0 or ( item.filename ~= nil and item.filename ~= "")
 end
 
 M.is_valid = is_valid

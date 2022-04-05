@@ -342,9 +342,9 @@ local function follow_prev(items, bufnr, line)
     local j = #items - i + 1
     local item = items[j]
 
-    if is_valid(item) then
+    if is_valid(item) and item.bufnr == bufnr then
       last_valid = j
-      if item.lnum <= line and item.bufnr == bufnr then
+      if item.lnum <= line then
         return j
       end
     end
@@ -358,9 +358,9 @@ local function follow_next(items, bufnr, line)
   local i = 1
   local last_valid = 1
   for _,item in ipairs(items) do
-    if is_valid(item) then
+    if is_valid(item) and item.bufnr == bufnr then
       last_valid = i
-      if item.lnum >= line and item.bufnr == bufnr then
+      if item.lnum >= line then
         return i
       end
     end
@@ -699,6 +699,10 @@ function M.set(list, opts)
 
   if opts.compiler ~= nil then
     vim.cmd("compiler! " .. opts.compiler)
+  else
+  end
+    if opts.lines == nil and opts.items == nil then
+    api.nvim_err_writeln("Missing either opts.lines or opts.items in qf.set()")
   end
 
   if list == 'c' then
@@ -712,7 +716,6 @@ function M.set(list, opts)
       title = opts.title,
       items = opts.items,
       lines = opts.lines,
-      tally = true
     })
   end
 
@@ -723,12 +726,14 @@ function M.set(list, opts)
     vim.cmd("compiler " .. old_c)
   end
 
-  local title = (opts.title or '') .. util.tally(list)
+  if opts.title then
+    local title = (opts.title or '') .. (opts.tally and util.tally(list) or "")
 
-  if list == 'c' then
-    vim.fn.setqflist({}, "r", { title = title  })
-  else
-    vim.fn.setloclist(".", {}, "r", { title = title  })
+    if list == 'c' then
+      vim.fn.setqflist({}, "r", { title = title  })
+    else
+      vim.fn.setloclist(".", {}, "r", { title = title  })
+    end
   end
 
   M.config[list].last_line = nil
@@ -760,6 +765,36 @@ function M.keep(list, filter)
   end, list_items(list))
 
   M.set(list, { items = items, open = true})
+end
+
+function M.sort(list)
+  list = fix_list(list)
+  local items = list_items(list, true)
+  table.sort(items, function(a, b)
+    a.fname = a.fname or fn.bufname(a.bufnr)
+    b.fname = b.fname or fn.bufname(b.bufnr)
+
+    if not is_valid(a) then
+      a.text = "invalid"
+    end
+    if not is_valid(b) then
+      b.text = "invalid"
+    end
+
+    if a.fname == b.fname then
+      if a.lnum == b.lnum then
+        return a.col < b.col
+      else
+        return a.lnum < b.lnum
+      end
+    else
+      return a.fname < b.fname
+    end
+  end)
+
+  M.set(list, {
+    items = items,
+  })
 end
 
 return M
