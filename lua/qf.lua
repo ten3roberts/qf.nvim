@@ -169,12 +169,24 @@ function M.reopen_all()
   reopen('l')
 end
 
-local function set_entry(list, idx)
+local function set_list(list, items, mode, opts)
   if list == 'c' then
-    fn.setqflist({}, "r", { idx = idx })
+    return fn.setqflist(items, mode, opts)
   else
-    fn.setloclist(".", {}, "r", { idx = idx })
+    return fn.setloclist(".", items, mode, opts)
   end
+end
+
+local function get_list(list, what)
+  if list == 'c' then
+    return fn.getqflist(what)
+  else
+    return fn.getloclist(".", what)
+  end
+end
+
+local function set_entry(list, idx)
+  set_list(list, {}, "r", { idx = idx })
 end
 
 local function current_entry(list)
@@ -701,7 +713,7 @@ function M.set(list, opts)
     vim.cmd("compiler! " .. opts.compiler)
   else
   end
-    if opts.lines == nil and opts.items == nil then
+  if opts.lines == nil and opts.items == nil then
     api.nvim_err_writeln("Missing either opts.lines or opts.items in qf.set()")
   end
 
@@ -729,11 +741,6 @@ function M.set(list, opts)
   if opts.title then
     local title = (opts.title or '') .. (opts.tally and util.tally(list) or "")
 
-    if list == 'c' then
-      vim.fn.setqflist({}, "r", { title = title  })
-    else
-      vim.fn.setloclist(".", {}, "r", { title = title  })
-    end
   end
 
   M.config[list].last_line = nil
@@ -746,6 +753,23 @@ function M.set(list, opts)
     M.open(list, true)
   else
     M.close(list)
+  end
+end
+
+--- Suffix the chosen list with a summary of the classified number of entries
+function M.tally(list, title)
+  list = fix_list(list)
+
+  if title == nil then
+    title = get_list(list, { title = 1 }).title
+  end
+
+  local s = title:match("[^%-]*") .. util.tally(list)
+
+  if list == 'c' then
+    vim.fn.setqflist({}, "r", { title = s })
+  else
+    vim.fn.setloclist(".", {}, "r", { title = s  })
   end
 end
 

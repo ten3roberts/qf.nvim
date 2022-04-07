@@ -66,10 +66,11 @@ function M.get_height(list, config)
 end
 
 local diagnostic_severities = {
-  E = { hl = '%#Error#',   type = 'E', kind = 'error',   sign = ''};
-  W = { hl = '%#Warning#', type = 'W', kind = 'warning', sign = ''};
-  I = { hl = '%#Info#',    type = 'I', kind = 'info',    sign = ''};
-  N = { hl = '%#Hint#',    type = 'H', kind = 'hint',    sign = ''};
+  { hl = '%#DiagnosticSignError#', type = 'E', kind = 'error',   sign = ''};
+  { hl = '%#DiagnosticSignWarn#',  type = 'W', kind = 'warning', sign = ''};
+  { hl = '%#DiagnosticSignInfo#',  type = 'I', kind = 'info',    sign = ''};
+  { hl = '%#DiagnosticSignHint#',  type = 'H', kind = 'hint',    sign = ''};
+  { hl = '%#DiagnosticSignHint#',  type = 'T', kind = 'text',    sign = ''};
 }
 
 function M.tally(list)
@@ -78,28 +79,33 @@ function M.tally(list)
   local W = 0
   local I = 0
   local N = 0
+  local T = 0
 
   for _,v in ipairs(M.list_items(list, true)) do
     if v.type == "E" then
       E = E + 1
-    elseif v.type == "E" then
+    elseif v.type == "W" then
       W = W + 1
     elseif v.type == "I" then
       I = I + 1
     elseif v.type == "N" then
       N = N + 1
+    else
+      T = T + 1
     end
   end
 
-  local tally = { E = E, W = W, I = I, N = N }
+  local tally = { E, W, I, N, T }
   local t = {}
   for i,v in ipairs(tally) do
     if v > 0 then
       local severity = diagnostic_severities[i]
-      t[#t+1] = severity.hl .. severity.sign .. ' ' .. v .. ' '
+      t[#t + 1] = severity.hl .. severity.sign .. ' ' .. v
     end
   end
-  return table.concat(t, " | ")
+
+  -- return table.concat(t, " | ")
+  return " - " .. table.concat(t, " ") .. "%#Normal#"
 end
 
 return M
