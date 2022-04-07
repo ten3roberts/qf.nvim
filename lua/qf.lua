@@ -789,8 +789,6 @@ function M.setup_autocmds(config)
       au("QuickFixCmdPost", function() open(k, true) end, { pattern = list_post_commands(k) })
     end
   end
-
-  au("QuitPre", ":lclose")
 end
 
 return M
