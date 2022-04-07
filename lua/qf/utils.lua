@@ -29,6 +29,24 @@ end
 
 M.is_valid = is_valid
 
+
+function M.set_list(list, items, mode, opts)
+  if list == 'c' then
+    return fn.setqflist(items, mode, opts)
+  else
+    return fn.setloclist(".", items, mode, opts)
+  end
+end
+
+function M.get_list(list, what)
+  what = what or { items = 1 }
+  if list == 'c' then
+    return fn.getqflist(what)
+  else
+    return fn.getloclist(".", what)
+  end
+end
+
 function M.get_list_win(list)
   list = M.fix_list(list)
   local tabnr = fn.tabpagenr()
@@ -41,10 +59,11 @@ function M.get_list_win(list)
 end
 
 function M.list_items(list, all)
-  if list == 'c' then
-    return vim.tbl_filter(function(v) return is_valid or all end, fn.getqflist())
+  local items = M.get_list(list).items
+  if all then
+    return items
   else
-    return vim.tbl_filter(function(v) return is_valid or all end, fn.getloclist('.'))
+    return vim.tbl_filter(is_valid, items)
   end
 end
 
@@ -81,7 +100,7 @@ function M.tally(list)
   local N = 0
   local T = 0
 
-  for _,v in ipairs(M.list_items(list, true)) do
+  for _,v in ipairs(M.list_items(list)) do
     if v.type == "E" then
       E = E + 1
     elseif v.type == "W" then

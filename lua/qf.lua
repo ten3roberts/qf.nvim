@@ -18,12 +18,31 @@ local list_defaults = {
   relativenumber = false, -- Show relative line numbers in list
   unfocus_close = false, -- Close list when window loses focus
   focus_open = false, -- Auto open list on window focus if it contains items
-  close_other = false, -- Close other list kind when list opens
 }
 
+--- @class config
+--- @field c List
+--- @field l List
+--- @field close_other boolean #Close other list kind on open. If location list opens, qf closes, and vice-versa
+--
+--- @class List
+--- @field auto_close boolean #Close the list if empty
+--- @field auto_follow string|boolean #Follow current entries. Possible strategies: prev,next,nearest or false to disable
+--- @field auto_follow_limit number #limit the distance for the auto follow
+--- @field follow_slow boolean #debounce following to `updatetime`
+--- @field auto_open boolean #Open list on QuickFixCmdPost, e.g; grep
+--- @field auto_resize boolean #Grow or shrink list according to items
+--- @field max_height number #Auto resize max height
+--- @field min_height number #Auto resize min height
+--- @field wide boolean #Open list at the very bottom of the screen
+--- @field number boolean #Show line numbers in window
+--- @field relativenumber boolean #Show relative line number in window
+--- @field unfocus_close boolean #Close list when parent window loses focus
+--- @field focus_open boolean #Pair with `unfocus_close`, open list when parent window focuses
 local defaults = {
   c = list_defaults,
   l = list_defaults,
+  close_other = false
 }
 
 local M = { config = defaults }
@@ -40,88 +59,32 @@ local post_commands = {
   'caddexpr', 'cbuffer', 'cgetbuffer', 'caddbuffer'
 }
 
-local function qf_post_commands()
-  return table.concat(post_commands, ',')
-end
-
-local function loc_post_commands()
-  return table.concat( vim.tbl_map(
-    -- Remove prefix c and prepend l
-    function(val) if val:sub(1,1) == 'c' then
-      return 'l'..val:sub(2)
-    else
-      return 'l' .. val end
-    end
-    , post_commands), ',')
-end
-
-
--- Setup and configure qf.nvim
-local function setup_autocmds(config)
-  cmd 'augroup qf.nvim'
-  cmd 'autocmd!'
-
-  local c = config.c
-  local l = config.l
-
-  if l.auto_follow then
-    if l.follow_slow then
-      cmd('autocmd CursorHold * :lua require"qf".follow("l", "' .. l.auto_follow .. '", true)')
-    else
-      cmd('autocmd CursorMoved * :lua require"qf".follow("l", "' .. l.auto_follow .. '", true)')
-    end
+local function list_post_commands(l)
+  if l == "l" then
+    return vim.tbl_map(
+      -- Remove prefix c and prepend l
+      function(val) if val:sub(1,1) == 'c' then
+        return 'l'..val:sub(2)
+      else
+        return 'l' .. val end
+      end
+      , post_commands)
+  else
+    return post_commands
   end
-
-  if c.auto_follow then
-    if c.follow_slow then
-      cmd('autocmd CursorHold * :lua require"qf".follow("c", "' .. c.auto_follow .. '", true)')
-    else
-      cmd('autocmd CursorMoved * :lua require"qf".follow("c", "' .. c.auto_follow .. '", true)')
-    end
-  end
-
-  if l.unfocus_close then
-    cmd('autocmd WinLeave * :lclose')
-  end
-
-  if c.unfocus_close then
-    cmd('autocmd WinLeave * :cclose')
-  end
-
-
-  if l.focus_open then
-    cmd('autocmd WinEnter * :lua require"qf".open("l", true)')
-  end
-
-  if c.focus_open then
-    cmd('autocmd WinEnter * :lua require"qf".open("c", true)')
-  end
-
-  if l.auto_open then
-    cmd('autocmd QuickFixCmdPost ' .. loc_post_commands() .. ' :lua require"qf".open("l", true)')
-  end
-
-  if c.auto_open then
-    cmd('autocmd QuickFixCmdPost ' .. qf_post_commands() .. ' :lua require"qf".open("c", true)')
-  end
-
-  -- cmd('autocmd WinLeave * :lua require"qf".reopen_all()')
-
-  cmd('autocmd QuitPre * :lua require"qf".close("loc")')
-
-  cmd 'augroup END'
 end
 
 local function istrue(val)
   return val == true or val == '1'
 end
 
+--- @param config config
 function M.setup(config)
   config = config or {}
   M.config = vim.tbl_deep_extend('force', defaults, config)
   M.saved = {}
 
-  setup_autocmds(M.config)
+  M.setup_autocmds(M.config)
 end
 
 local function printv(msg, verbose)
@@ -169,32 +132,11 @@ function M.reopen_all()
   reopen('l')
 end
 
-local function set_list(list, items, mode, opts)
-  if list == 'c' then
-    return fn.setqflist(items, mode, opts)
-  else
-    return fn.setloclist(".", items, mode, opts)
-  end
-end
-
-local function get_list(list, what)
-  if list == 'c' then
-    return fn.getqflist(what)
-  else
-    return fn.getloclist(".", what)
-  end
-end
+local set_list = util.set_list
+local get_list = util.get_list
 
 local function set_entry(list, idx)
   set_list(list, {}, "r", { idx = idx })
-end
-
-local function current_entry(list)
-  if list == 'c' then
-    return fn.getqflist({}, "r", { idx = 1 }).idx
-  else
-    return fn.getloclist(".", {}, "r", { idx = 1 }).idx
-  end
 end
 
 -- Setup qf filetype specific options
@@ -277,7 +219,7 @@ function M.open(list, stay)
     return
   end
 
-  if opts.close_other then
+  if M.config.close_other then
     if list == 'c' then
       cmd 'lclose'
     elseif list == 'l' then
@@ -393,7 +335,7 @@ local function follow_nearest(items, bufnr, line)
     if is_valid(item) then
       local dist = math.abs(item.lnum - line)
 
-      if min == nil or dist < min then
+      if min == nil or dist < min and item.bufnr == bufnr then
         min = dist
         min_i = i
       end
@@ -561,7 +503,7 @@ function M.above(list, wrap, verbose)
 
   list = fix_list(list)
 
-  local items = list_items(list)
+  local items = list_items(list, true)
 
   if not check_empty(list, #items, verbose) then
     return
@@ -599,7 +541,7 @@ function M.below(list, wrap, verbose)
   end
   list = fix_list(list)
 
-  local items = list_items(list)
+  local items = list_items(list, true)
 
   if not check_empty(list, #items, verbose) then
     return
@@ -738,9 +680,8 @@ function M.set(list, opts)
     vim.cmd("compiler " .. old_c)
   end
 
-  if opts.title then
-    local title = (opts.title or '') .. (opts.tally and util.tally(list) or "")
-
+  if opts.tally then
+    M.tally(list, opts.title or "")
   end
 
   M.config[list].last_line = nil
@@ -766,11 +707,7 @@ function M.tally(list, title)
 
   local s = title:match("[^%-]*") .. util.tally(list)
 
-  if list == 'c' then
-    vim.fn.setqflist({}, "r", { title = s })
-  else
-    vim.fn.setloclist(".", {}, "r", { title = s  })
-  end
+  set_list(list, {}, "r", { title = s})
 end
 
 --- @class Filter
@@ -819,6 +756,41 @@ function M.sort(list)
   M.set(list, {
     items = items,
   })
+end
+
+--- Setup and configure qf.nvim
+--- @param config config
+function M.setup_autocmds(config)
+  local g = api.nvim_create_augroup("qf", { clear = true })
+  local au = function(events, callback, opts)
+    opts = opts or {}
+    opts.group = g
+    opts.callback = callback
+    api.nvim_create_autocmd(events, opts)
+  end
+
+  local follow = M.follow
+  local open = M.open
+  local close = M.close
+  for k,list in pairs({ c = config.c, l = config.l }) do
+    if list.auto_follow then
+      au(list.follow_slow and "CursorHold" or "CursorMoved", function() follow(k, list.auto_follow, true) end)
+    end
+
+    if list.unfocus_close then
+      au("WinLeave", function() vim.defer_fn(function() close(k) end, 50) end)
+    end
+
+    if list.focus_open then
+      au("WinEnter",  function() open(k, true) end)
+    end
+
+    if list.auto_open then
+      au("QuickFixCmdPost", function() open(k, true) end, { pattern = list_post_commands(k) })
+    end
+  end
+
+  au("QuitPre", ":lclose")
 end
 
 return M
