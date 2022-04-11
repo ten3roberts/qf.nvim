@@ -21,8 +21,16 @@ Quickfix and location list management for Neovim.
 - [X] Automatically open or close list on window leave and enter
 - [X] Make list regroup to window on split
 - [X] Close other location list when quickfix opens and vice verse
+- [X] Pretty print list entries
 
-Qf.nvim offers many customization options to suit your workflow.
+qf.nvim offers many customization options to suit your workflow.
+
+The plugin uses the default builtin quickfix list and location list and only
+extends it, which means all builtin behaviour and plugins are compatible, such
+as `:cclose`, `:cnext`, `:copen`, `:grep`, `:make`, `vim.diagnostic.set_qflist`,
+etc. For `:make`, there exists an asynchronous name based build system called
+( recipe.nvim )[https://github.com/ten3roberts/recipe.nvim], which integrates
+directly with qf.nvim for added functionality such as error tallying.
 
 ## Installation
 ### [packer](https://github.com/wbthomason/packer.nvim)
@@ -50,7 +58,7 @@ qf.nvim exposes a lua api.
 
 Most functions require a first parameter list to specify which list to act on.
 Either 'c','qf', or 'quickfix' for affecting the quickfix list, or
-'l','loc','location' for affecting the location list. 
+'l','loc','location' for affecting the location list.
 
 If a value of 'visible' is given, it will use the currently visible list type,
 or the quickfix window as a fallback.
@@ -166,7 +174,6 @@ require 'qf'.setup {
         relativenumber = false, -- Show relative line numbers in list
         unfocus_close = false, -- Close list when window loses focus
         focus_open = false, -- Auto open list on window focus if it contains items
-        close_other = false, -- Close quickfix list when location list opens
     },
     -- Quickfix list configuration
     c = {
@@ -183,8 +190,9 @@ require 'qf'.setup {
         relativenumber = false, -- Show relative line numbers in list
         unfocus_close = false, -- Close list when window loses focus
         focus_open = false, -- Auto open list on window focus if it contains items
-        close_other = false, -- Close location list when quickfix list opens
       }
+      close_other = false, -- Close location list when quickfix list opens
+      pretty = true, -- "Pretty print quickfix lists"
 }
 ```
 

@@ -24,6 +24,7 @@ local list_defaults = {
 --- @field c List
 --- @field l List
 --- @field close_other boolean #Close other list kind on open. If location list opens, qf closes, and vice-versa
+--- @field pretty boolean #Use a pretty printed format function for the quickfix lists
 --
 --- @class List
 --- @field auto_close boolean #Close the list if empty
@@ -42,16 +43,17 @@ local list_defaults = {
 local defaults = {
   c = list_defaults,
   l = list_defaults,
-  close_other = false
+  close_other = false,
+  pretty = true
 }
 
 local M = { config = defaults }
 
-local util = require("qf.utils")
+local utils = require("qf.utils")
 
-local fix_list = util.fix_list
-local list_items = util.list_items
-local get_height = util.get_height
+local fix_list = utils.fix_list
+local list_items = utils.list_items
+local get_height = utils.get_height
 
 local post_commands = {
   'make', 'grep', 'grepadd', 'vimgrep', 'vimgrepadd',
@@ -84,6 +86,12 @@ function M.setup(config)
   M.config = vim.tbl_deep_extend('force', defaults, config)
   M.saved = {}
 
+  if M.config.pretty then
+    vim.opt.quickfixtextfunc = "QfFormat"
+    M.setup_syntax = function() vim.cmd(utils.setup_syntax()) end
+  else
+    M.setup_syntax = function() end
+  end
   M.setup_autocmds(M.config)
 end
 
@@ -108,14 +116,14 @@ end
 -- This is to fix the list stretching bottom of a new vertical split.
 function M.reopen(list)
   local prev = fn.win_getid(fn.winnr('#'))
-  if api.nvim_buf_get_option(api.nvim_win_get_buf(0), 'filetype') ~= 'qf' or api.nvim_buf_get_option(api.nvim_win_get_buf(prev), 'filetype') ~= 'qf' then
-    -- print'qf'
+  if api.nvim_buf_get_option(api.nvim_win_get_buf(0), 'filetype') ~= 'qf' or
+    api.nvim_buf_get_option(api.nvim_win_get_buf(prev), 'filetype') ~= 'qf' then
     return
   end
 
   list = fix_list(list)
 
-  if not util.get_list_win(list) then
+  if not utils.get_list_win(list) then
     return
   end
 
@@ -132,8 +140,8 @@ function M.reopen_all()
   reopen('l')
 end
 
-local set_list = util.set_list
-local get_list = util.get_list
+local set_list = utils.set_list
+local get_list = utils.get_list
 
 local function set_entry(list, idx)
   set_list(list, {}, "r", { idx = idx })
@@ -184,7 +192,7 @@ function M.resize(list)
 
   local opts = M.config[list]
 
-  local win = util.get_list_win(list)
+  local win = utils.get_list_win(list)
 
   -- Don't do anything if list isn't open
   if win == 0 then
@@ -204,7 +212,7 @@ end
 --- If auto_close is true, the list will be closed if empty, similar to cwindow
 --- @param list string
 --- @param stay boolean
-function M.open(list, stay)
+function M.open(list, stay, silent)
   list = fix_list(list)
 
   local opts = M.config[list]
@@ -212,6 +220,9 @@ function M.open(list, stay)
 
   -- Auto close
   if num_items == 0 then
+    if silent ~= true then
+      api.nvim_err_writeln("No items")
+    end
     if opts.auto_close then
       cmd(list .. 'close')
       return
@@ -227,7 +238,7 @@ function M.open(list, stay)
     end
   end
 
-  local win = util.get_list_win(list)
+  local win = utils.get_list_win(list)
   if win ~= 0 then
     if not istrue(stay) then
       api.nvim_set_current_win(win)
@@ -255,7 +266,7 @@ end
 function M.toggle(list, stay)
   list = fix_list(list)
 
-  if util.get_list_win(list) ~= 0 then
+  if utils.get_list_win(list) ~= 0 then
     M.close(list)
   else
     M.open(list, stay)
@@ -287,7 +298,7 @@ local function clear_prompt()
   vim.api.nvim_command('normal :esc<CR>')
 end
 
-local is_valid = util.is_valid
+local is_valid = utils.is_valid
 
 -- Returns the list entry currently previous to the cursor
 local function follow_prev(items, bufnr, line)
@@ -691,7 +702,7 @@ function M.set(list, opts)
   end
 
   if opts.open ~= false then
-    M.open(list, true)
+    M.open(list, true, true)
   else
     M.close(list)
   end
@@ -705,7 +716,7 @@ function M.tally(list, title)
     title = get_list(list, { title = 1 }).title
   end
 
-  local s = title:match("[^%-]*") .. util.tally(list)
+  local s = title:match("[^%-]*") .. utils.tally(list)
 
   set_list(list, {}, "r", { title = s})
 end
@@ -721,8 +732,8 @@ function M.keep(list, filter)
   list = fix_list(list);
   local items = vim.tbl_filter(function(v)
     return
-    (filter.type == nil or filter.type == v.type) and
-    (filter.text == nil or v.text:find(filter.text))
+      (filter.type == nil or filter.type == v.type) and
+      (filter.text == nil or v.text:find(filter.text))
   end, list_items(list))
 
   M.set(list, { items = items, open = true})
@@ -786,7 +797,7 @@ function M.setup_autocmds(config)
     end
 
     if list.auto_open then
-      au("QuickFixCmdPost", function() open(k, true) end, { pattern = list_post_commands(k) })
+      au("QuickFixCmdPost", function() open(k, true, true) end, { pattern = list_post_commands(k) })
     end
   end
 end
