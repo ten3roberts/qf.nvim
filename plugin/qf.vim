@@ -35,6 +35,7 @@ command! -nargs=* Qset    lua require'qf'.below('c', <q-args>)
 command! -nargs=* Lopen   lua require'qf'.open('l', <q-args>)
 " Close the quickfix list
 command! -nargs=* Lclose  lua require'qf'.close('l', <q-args>)
+command! -nargs=* Vclose  lua require'qf'.close('visible', <q-args>)
 " Toggle the quickfix list
 command! -nargs=* Ltoggle lua require'qf'.close('l', <q-args>)
 " Clear the contents of quickfix list
@@ -66,14 +67,14 @@ command! -nargs=* Lload   lua require'qf'.load('l', <q-args>)
 " Set the item in quickfix list
 command! -nargs=* Lset    lua require'qf'.below('l', <q-args>)
 
-command! -nargs=1 LKeepType lua require'qf'.keep('l', { type = <q-args> })
-command! -nargs=1 QKeepType lua require'qf'.keep('c', { type = <q-args> })
-command! -nargs=1 VKeepType lua require'qf'.keep('visible', { type = <q-args> })
+command! -nargs=1 LkeepType lua require'qf'.keep('l', function(v) return v.type == <q-args> end)
+command! -nargs=1 QkeepType lua require'qf'.keep('c', function(v) return v.type == <q-args> end)
+command! -nargs=1 VkeepType lua require'qf'.keep('visible', function(v) return v.type == <q-args> end)
 
-command! -nargs=1 LKeepText lua require'qf'.keep('l', { text = <q-args> })
-command! -nargs=1 QKeepText lua require'qf'.keep('c', { text = <q-args> })
-command! -nargs=1 VKeepText lua require'qf'.keep('visible', { type = <q-args> })
+command! -nargs=1 LkeepText lua require'qf'.keep('l', { text = <q-args> })
+command! -nargs=1 QkeepText lua require'qf'.keep('c', { text = <q-args> })
+command! -nargs=1 VkeepText lua require'qf'.keep('visible', { type = <q-args> })
 
-command! -nargs=0 LSort lua require'qf'.sort('l')
-command! -nargs=0 QSort lua require'qf'.sort('c')
-command! -nargs=0 VSort lua require'qf'.sort('visible')
+command! -nargs=0 Lsort lua require'qf'.sort('l')
+command! -nargs=0 Qsort lua require'qf'.sort('c')
+command! -nargs=0 Vsort lua require'qf'.sort('visible')

@@ -63,71 +63,7 @@ Either 'c','qf', or 'quickfix' for affecting the quickfix list, or
 If a value of 'visible' is given, it will use the currently visible list type,
 or the quickfix window as a fallback.
 
-```lua
--- Setup and configure qf.nvim
-require('qf').setup(options)
-
--- Same as resize, but does nothing if auto_resize is off
-require('qf').checked_auto_resize(list, stay)
-
--- Automatically resize list to the number of items between max and min height
--- If stay, the list will not be focused.
--- num_items can be provided if number of items are already none, if nil, they will be queried
-require('qf').resize(list, stay, num_items)
-
--- Hide quickfix and location lists from the buffers list
--- Hide linenumbers and relative line numbers
--- Open the `quickfix` or `location` list
--- If stay == true, the list will not be focused
--- If auto_close is true, the list will be closed if empty, similar to cwindow
-require('qf').open(list, stay)
-
--- Close list
-require('qf').close(list)
-
--- Toggle list
--- If stay == true, the list will not be focused
-require('qf').toggle(list, stay)
-
--- Clears the quickfix or current location list
--- If name is not nil, the current list will be saved before being cleared
-require('qf').clear(list, name)
-
--- Returns the list entry currently previous to the cursor
--- Returns the list entry currently after the cursor
--- Returns the list entry closest to the cursor vertically
--- strategy is one of the following:
--- - 'prev'
--- - 'next'
--- - 'nearest'
--- (optional) limit, don't select entry further away than limit. Use true to use config value
--- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
-require('qf').follow(list, strategy)
-
--- Wrapping version of [lc]next. Also takes into account valid entries.
--- If wrap is nil or true, it will wrap around the list
-require('qf').next(list, wrap = true)
-
--- Wrapping version of [lc]prev. Also takes into account valid entries.
--- If wrap is nil or true, it will wrap around the list
-require('qf').prev(list, wrap = true)
-
--- Wrapping version of [lc]above
--- Will switch buffer
--- If wrap is nil or true, it will wrap around the list
-require('qf').above(list, wrap = true)
-
--- Wrapping version of [lc]below
--- Will switch buffer
--- If wrap is nil or true, it will wrap around the list
-require('qf').below(list, wrap = true)
-
--- Save quickfix or location list with name
-require('qf').save(list, name)
-
--- Loads a saved list into the location or quickfix list
-require('qf').load(list, name)
-```
+See `(qf.nvim)[./doc/qf.txt` for more details.
 
 ## Example keymaps
 ```vim

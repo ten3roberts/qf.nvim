@@ -4,43 +4,51 @@ local fn = vim.fn
 local bo = vim.bo
 local wo = vim.wo
 
+--- Documentation
+--- Quickfix and Location list management for Neovim.
+---
+--- This plugin allows easier use of the builtin lists for wrapping navigation,
+--following, toggling, and much more.
+--
+---@tag qf.nvim
+
+---@class List
+---@field auto_close boolean Close the list if empty
+---@field auto_follow string|boolean Follow current entries. Possible strategies: prev,next,nearest or false to disable
+---@field auto_follow_limit number limit the distance for the auto follow
+---@field follow_slow boolean debounce following to `updatetime`
+---@field auto_open boolean Open list on QuickFixCmdPost, e.g; grep
+---@field auto_resize boolean Grow or shrink list according to items
+---@field max_height number Auto resize max height
+---@field min_height number Auto resize min height
+---@field wide boolean Open list at the very bottom of the screen
+---@field number boolean Show line numbers in window
+---@field relativenumber boolean Show relative line number in window
+---@field unfocus_close boolean Close list when parent window loses focus
+---@field focus_open boolean Pair with `unfocus_close`, open list when parent window focuses
 local list_defaults = {
-  auto_close = true, -- Automatically close location/quickfix list if empty
-  auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest, or false to disable
-  auto_follow_limit = 8, -- Do not follow if entry is further away than x lines
-  follow_slow = true, -- Only follow on CursorHold
-  auto_open = true, -- Automatically open list on QuickFixCmdPost
-  auto_resize = true, -- Auto resize and shrink location list if less than `max_height`
-  max_height = 8, -- Maximum height of location/quickfix list
-  min_height = 5, -- Minimum height of location/quickfix list
-  wide = false, -- Open list at the very bottom of the screen, stretching the whole width.
-  number = false, -- Show line numbers in list
-  relativenumber = false, -- Show relative line numbers in list
-  unfocus_close = false, -- Close list when window loses focus
-  focus_open = false, -- Auto open list on window focus if it contains items
+  auto_close = true,
+  auto_follow = 'prev',
+  auto_follow_limit = 8,
+  follow_slow = true,
+  auto_open = true,
+  auto_resize = true,
+  max_height = 8,
+  min_height = 5,
+  wide = false,
+  number = false,
+  relativenumber = false,
+  unfocus_close = false,
+  focus_open = false,
 }
 
---- @class config
---- @field c List
---- @field l List
---- @field close_other boolean #Close other list kind on open. If location list opens, qf closes, and vice-versa
---- @field pretty boolean #Use a pretty printed format function for the quickfix lists
---
---- @class List
---- @field auto_close boolean #Close the list if empty
---- @field auto_follow string|boolean #Follow current entries. Possible strategies: prev,next,nearest or false to disable
---- @field auto_follow_limit number #limit the distance for the auto follow
---- @field follow_slow boolean #debounce following to `updatetime`
---- @field auto_open boolean #Open list on QuickFixCmdPost, e.g; grep
---- @field auto_resize boolean #Grow or shrink list according to items
---- @field max_height number #Auto resize max height
---- @field min_height number #Auto resize min height
---- @field wide boolean #Open list at the very bottom of the screen
---- @field number boolean #Show line numbers in window
---- @field relativenumber boolean #Show relative line number in window
---- @field unfocus_close boolean #Close list when parent window loses focus
---- @field focus_open boolean #Pair with `unfocus_close`, open list when parent window focuses
---- @field signs table Customise signs using { hl, sign }
+---@tag qf.config
+---@class Config
+---@field c List
+---@field l List
+---@field close_other boolean Close other list kind on open. If location list opens, qf closes, and vice-versa..
+---@field pretty boolean Use a pretty printed format function for the quickfix lists.
+---@field signs table Customize signs using { hl, sign }
 local defaults = {
   c = list_defaults,
   l = list_defaults,
@@ -55,7 +63,7 @@ local defaults = {
   }
 }
 
-local M = { config = defaults }
+local qf = { config = defaults }
 
 local utils = require "qf.util"
 
@@ -89,20 +97,20 @@ local function istrue(val)
   return val == true or val == '1'
 end
 
---- @param config config
-function M.setup(config)
-  config = config or {}
-  M.config = vim.tbl_deep_extend('force', defaults, config)
-  M.saved = {}
+--- Initialize and configure qf.nvim using the provided config.
+---@param config Config
+function qf.setup(config)
+  qf.config = vim.tbl_deep_extend('force', defaults, config or {})
+  qf.saved = {}
 
-  if M.config.pretty then
+  if qf.config.pretty then
     local fmt = require "qf.format"
     vim.opt.quickfixtextfunc = "QfFormat"
-    M.setup_syntax = function() vim.cmd(fmt.setup_syntax()) end
+    qf.setup_syntax = function() vim.cmd(fmt.setup_syntax()) end
   else
-    M.setup_syntax = function() end
+    qf.setup_syntax = function() end
   end
-  M.setup_autocmds(M.config)
+  qf.setup_autocmds(qf.config)
 end
 
 local function printv(msg, verbose)
@@ -122,9 +130,10 @@ local function check_empty(list, num_items, verbose)
   return true
 end
 
--- Close and opens list if already open.
--- This is to fix the list stretching bottom of a new vertical split.
-function M.reopen(list)
+--- Close and opens list if already open.
+--- This is to fix the list stretching bottom of a new vertical split.
+---@param list string
+function qf.reopen(list)
   local prev = fn.win_getid(fn.winnr('#'))
   if api.nvim_buf_get_option(api.nvim_win_get_buf(0), 'filetype') ~= 'qf' or
       api.nvim_buf_get_option(api.nvim_win_get_buf(prev), 'filetype') ~= 'qf' then
@@ -137,15 +146,15 @@ function M.reopen(list)
     return
   end
 
-  cmd('noau ' .. list .. 'close | noau ' .. list .. 'open ' .. get_height(list, M.config))
+  cmd('noau ' .. list .. 'close | noau ' .. list .. 'open ' .. get_height(list, qf.config))
 
-  M.on_ft()
+  qf.on_ft()
 
   cmd("noau wincmd p")
 end
 
-function M.reopen_all()
-  local reopen = M.reopen
+function qf.reopen_all()
+  local reopen = qf.reopen
   reopen('c')
   reopen('l')
 end
@@ -158,7 +167,7 @@ local function set_entry(list, idx)
 end
 
 -- Setup qf filetype specific options
-function M.on_ft(winid)
+function qf.on_ft(winid)
   winid = winid or fn.win_getid()
   local wininfo = fn.getwininfo(winid) or {}
   local list = nil
@@ -179,7 +188,7 @@ function M.on_ft(winid)
     return
   end
 
-  local opts = M.config[list]
+  local opts = qf.config[list]
 
   bo.buflisted = false
   wo.winfixheight = true
@@ -187,7 +196,7 @@ function M.on_ft(winid)
   wo.relativenumber = opts.relativenumber
 
   if opts.auto_resize then
-    api.nvim_win_set_height(winid, get_height(list, M.config))
+    api.nvim_win_set_height(winid, get_height(list, qf.config))
   end
 
   if opts.wide then
@@ -195,12 +204,14 @@ function M.on_ft(winid)
   end
 end
 
--- Resize list to the number of items between max and min height
--- If stay, the list will not be focused.
-function M.resize(list)
+--- Resize list to the number of items between max and min height
+--- If stay, the list will not be focused.
+---@param list string
+---@param size number|nil If nil, the size will be deduced from the item count and config
+function qf.resize(list, size)
   list = fix_list(list)
 
-  local opts = M.config[list]
+  local opts = qf.config[list]
 
   local win = utils.get_list_win(list)
 
@@ -209,7 +220,7 @@ function M.resize(list)
     return
   end
 
-  local height = get_height(list, M.config)
+  local height = size or get_height(list, qf.config)
   if height ~= 0 then
     api.nvim_win_set_height(win, height)
   elseif opts.auto_close() then
@@ -220,12 +231,13 @@ end
 --- Open the `quickfix` or `location` list
 --- If stay == true, the list will not be focused
 --- If auto_close is true, the list will be closed if empty, similar to cwindow
---- @param list string
---- @param stay boolean
-function M.open(list, stay, silent)
+---@param list string
+---@param stay boolean
+---@tag qf.open() Qopen Lopen
+function qf.open(list, stay, silent)
   list = fix_list(list)
 
-  local opts = M.config[list]
+  local opts = qf.config[list]
   local num_items = #list_items(list)
 
   -- Auto close
@@ -240,7 +252,7 @@ function M.open(list, stay, silent)
     return
   end
 
-  if M.config.close_other then
+  if qf.config.close_other then
     if list == 'c' then
       cmd 'lclose'
     elseif list == 'l' then
@@ -255,44 +267,47 @@ function M.open(list, stay, silent)
     end
     return
   end
-  cmd(list .. 'open ' .. get_height(list, M.config))
+  cmd(list .. 'open ' .. get_height(list, qf.config))
 
   if istrue(stay) then
     cmd "wincmd p"
   end
 end
 
---- Close list
-function M.close(list)
+--- Close `list`
+--- @param list List
+---@tag qf.close() Qclose LClose VClose
+function qf.close(list)
   list = fix_list(list)
 
   cmd(list .. 'close')
 end
 
--- Toggle list
--- If stay == true, the list will not be focused
---- @param list string
---- @param stay boolean
-function M.toggle(list, stay)
+--- Toggle `list`
+--- If stay == true, the list will not be focused
+---@param list List
+---@param stay boolean Do not focus the opened list
+---@tag qf.toggle() QToggle LToggle
+function qf.toggle(list, stay)
   list = fix_list(list)
 
   if utils.get_list_win(list) ~= 0 then
-    M.close(list)
+    qf.close(list)
   else
-    M.open(list, stay)
+    qf.open(list, stay)
   end
 
 end
 
 --- Clears the quickfix or current location list
---- If name is not nil, the current list will be saved before being cleared
---- @param list string
---- @param name string
-function M.clear(list, name)
+---@param list List
+---@param name string|nil save the list before clearing under name
+---@tag qf.clear() Qclear Lclear
+function qf.clear(list, name)
   list = fix_list(list)
 
   if name then
-    M.save(list, name)
+    qf.save(list, name)
   end
 
   if list == 'c' then
@@ -301,7 +316,7 @@ function M.clear(list, name)
     fn.setloclist('.', {})
   end
 
-  M.open(list, 0)
+  qf.open(list, 0)
 end
 
 local function clear_prompt()
@@ -378,15 +393,14 @@ local strategy_lookup = {
 --- - 'prev'
 --- - 'next'
 --- - 'nearest'
---- (optional) limit, don't select entry further away than limit.
---- If entry is further away than limit, the entry will not be selected. This is to prevent recentering of cursor caused by setpos. There is no way to select an entry without jumping, so the cursor position is saved and restored instead.
-function M.follow(list, strategy, limit)
+---@param limit number|nil Don't select entry further away than limit.
+function qf.follow(list, strategy, limit)
   if api.nvim_get_mode().mode ~= 'n' then
     return
   end
 
   list = fix_list(list)
-  local opts = M.config[list]
+  local opts = qf.config[list]
 
   local pos = fn.getpos('.')
 
@@ -432,9 +446,10 @@ function M.follow(list, strategy, limit)
   set_entry(list, i)
 end
 
--- Wrapping version of [lc]next. Also takes into account valid entries.
--- If wrap is nil or true, it will wrap around the list
-function M.next(list, wrap, verbose)
+--- Wrapping version of [lc]next. Also takes into account valid entries.
+--- If wrap is nil or true, it will wrap around the list
+---@tag qf.next() Qnext Lnext
+function qf.next(list, wrap, verbose)
   if wrap == nil then
     wrap = true
   end
@@ -453,7 +468,8 @@ end
 
 -- Wrapping version of [lc]prev. Also takes into account valid entries.
 -- If wrap is nil or true, it will wrap around the list
-function M.prev(list, wrap, verbose)
+---@tag qf.prev() Qprev Lprev
+function qf.prev(list, wrap, verbose)
   if wrap == nil then
     wrap = true
   end
@@ -513,9 +529,10 @@ local function next_valid(items, idx)
   return nil
 end
 
--- Wrapping version of [lc]above
--- Will switch buffer
-function M.above(list, wrap, verbose)
+--- Wrapping version of [lc]above
+--- Will switch buffer
+---@tag qf.above() Qabove Labove Vabove
+function qf.above(list, wrap, verbose)
   if wrap == nil then
     wrap = true
   end
@@ -552,9 +569,10 @@ function M.above(list, wrap, verbose)
   end
 end
 
--- Wrapping version of [lc]below
--- Will switch buffer
-function M.below(list, wrap, verbose)
+--- Wrapping version of [lc]below
+--- Will switch buffer
+---@tag qf.below() Qbelow Lbelow Vbelow
+function qf.below(list, wrap, verbose)
   if wrap == nil then
     wrap = true
   end
@@ -585,16 +603,16 @@ function M.below(list, wrap, verbose)
   end
 end
 
--- Save quickfix or location list with name
-function M.save(list, name)
+--- Save quickfix or location list with name
+function qf.save(list, name)
   list = fix_list(list)
 
-  M.saved[name] = list_items(list)
+  qf.saved[name] = list_items(list)
 end
 
 local function prompt_name()
   local t = {}
-  for k, _ in pairs(M.saved) do
+  for k, _ in pairs(qf.saved) do
     t[#t + 1] = k
   end
 
@@ -610,9 +628,9 @@ local function prompt_name()
   return t[choice]
 end
 
--- Loads a saved list into the location or quickfix list
--- If name is not given, user will be prompted with all saved lists.
-function M.load(list, name)
+--- Loads a saved list into the location or quickfix list
+--- If name is not given, user will be prompted with all saved lists.
+function qf.load(list, name)
   list = fix_list(list)
 
   if name == nil then
@@ -623,7 +641,7 @@ function M.load(list, name)
     return
   end
 
-  local items = M.saved[name]
+  local items = qf.saved[name]
 
   if items == nil then
     api.nvim_err_writeln("No list saved with name: " .. name)
@@ -636,27 +654,27 @@ function M.load(list, name)
     fn.setloclist('.', items)
   end
 
-  if M.config[list].auto_open then
-    M.open(list, true)
+  if qf.config[list].auto_open then
+    qf.open(list, true)
   end
 end
 
---- @class set_opts
---- @field items table
---- @field lines table
---- @field cwd string
---- @field compiler string|nil
---- @field winid number|nil
---- @field title string|nil
---- @field tally boolean|nil
---- @field open boolean
+---@class set_opts
+---@field items table
+---@field lines table
+---@field cwd string
+---@field compiler string|nil
+---@field winid number|nil
+---@field title string|nil
+---@field tally boolean|nil
+---@field open boolean
 
 --- Set location or quickfix list items
 --- If a compiler is given, the items will be parsed from it
 --- Invalidates follow cache
---- @param list string
---- @param opts set_opts
-function M.set(list, opts)
+---@param list string
+---@param opts set_opts
+function qf.set(list, opts)
   list = fix_list(list)
 
   local old_c = vim.b.current_compiler;
@@ -700,24 +718,24 @@ function M.set(list, opts)
   end
 
   if opts.tally then
-    M.tally(list, opts.title or "")
+    qf.tally(list, opts.title or "")
   end
 
-  M.config[list].last_line = nil
+  qf.config[list].last_line = nil
 
   if opts.cwd then
     api.nvim_set_current_dir(old_cwd)
   end
 
   if opts.open ~= false then
-    M.open(list, true, true)
+    qf.open(list, true, true)
   else
-    M.close(list)
+    qf.close(list)
   end
 end
 
 --- Suffix the chosen list with a summary of the classified number of entries
-function M.tally(list, title)
+function qf.tally(list, title)
   list = fix_list(list)
 
   if title == nil then
@@ -729,24 +747,20 @@ function M.tally(list, title)
   set_list(list, {}, "r", { title = s })
 end
 
---- @class Filter
---- @field type string|nil
---- @field text string|nil
-
---- Filter and keep items in a list based on predicate
---- @param list string
---- @param filter Filter
-function M.keep(list, filter)
+---Filter and keep items in a list based on `filter`
+---@param list string
+---@param filter function
+---@tag qf.keep() VkeepText QkeepText LkeepText VkeepType QkeepType LkeepType
+function qf.keep(list, filter)
   list = fix_list(list);
-  local items = vim.tbl_filter(function(v)
-    return (filter.type == nil or filter.type == v.type) and
-        (filter.text == nil or v.text:find(filter.text))
-  end, list_items(list))
+  local items = vim.tbl_filter(filter, list_items(list))
 
-  M.set(list, { items = items, open = true })
+  qf.set(list, { items = items, open = true })
 end
 
-function M.sort(list)
+--- Sort the items according to file -> line -> column
+---@tag qf.sort() Qsort Lsort Vsort
+function qf.sort(list)
   list = fix_list(list)
   local items = list_items(list, true)
   table.sort(items, function(a, b)
@@ -771,14 +785,14 @@ function M.sort(list)
     end
   end)
 
-  M.set(list, {
+  qf.set(list, {
     items = items,
   })
 end
 
---- Setup and configure qf.nvim
---- @param config config
-function M.setup_autocmds(config)
+--- Called in |qf.setup|
+---@param config Config
+function qf.setup_autocmds(config)
   local g = api.nvim_create_augroup("qf", { clear = true })
   local au = function(events, callback, opts)
     opts = opts or {}
@@ -787,9 +801,9 @@ function M.setup_autocmds(config)
     api.nvim_create_autocmd(events, opts)
   end
 
-  local follow = M.follow
-  local open = M.open
-  local close = M.close
+  local follow = qf.follow
+  local open = qf.open
+  local close = qf.close
   for k, list in pairs({ c = config.c, l = config.l }) do
     if list.auto_follow then
       au(list.follow_slow and "CursorHold" or "CursorMoved", function() follow(k, list.auto_follow, true) end)
@@ -809,4 +823,4 @@ function M.setup_autocmds(config)
   end
 end
 
-return M
+return qf
