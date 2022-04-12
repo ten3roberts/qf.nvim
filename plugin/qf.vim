@@ -71,9 +71,9 @@ command! -nargs=1 LkeepType lua require'qf'.keep('l', function(v) return v.type 
 command! -nargs=1 QkeepType lua require'qf'.keep('c', function(v) return v.type == <q-args> end)
 command! -nargs=1 VkeepType lua require'qf'.keep('visible', function(v) return v.type == <q-args> end)
 
-command! -nargs=1 LkeepText lua require'qf'.keep('l', { text = <q-args> })
-command! -nargs=1 QkeepText lua require'qf'.keep('c', { text = <q-args> })
-command! -nargs=1 VkeepText lua require'qf'.keep('visible', { type = <q-args> })
+command! -nargs=1 LkeepText lua require'qf'.keep('l',       function(v) return v.text:find(<q-args>) ~= nil end)
+command! -nargs=1 QkeepText lua require'qf'.keep('c',       function(v) return v.text:find(<q-args>) ~= nil end)
+command! -nargs=1 VkeepText lua require'qf'.keep('visible', function(v) return v.text:find(<q-args>) ~= nil end)
 
 command! -nargs=0 Lsort lua require'qf'.sort('l')
 command! -nargs=0 Qsort lua require'qf'.sort('c')

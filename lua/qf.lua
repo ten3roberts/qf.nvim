@@ -755,7 +755,7 @@ function qf.keep(list, filter)
   list = fix_list(list);
   local items = vim.tbl_filter(filter, list_items(list))
 
-  qf.set(list, { items = items, open = true })
+  qf.set(list, { items = items, open = true, tally = true })
 end
 
 --- Sort the items according to file -> line -> column
