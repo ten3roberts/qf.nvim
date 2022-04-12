@@ -40,16 +40,24 @@ local list_defaults = {
 --- @field relativenumber boolean #Show relative line number in window
 --- @field unfocus_close boolean #Close list when parent window loses focus
 --- @field focus_open boolean #Pair with `unfocus_close`, open list when parent window focuses
+--- @field signs table Customise signs using { hl, sign }
 local defaults = {
   c = list_defaults,
   l = list_defaults,
   close_other = false,
-  pretty = true
+  pretty = true,
+  signs = {
+    E = { hl = 'DiagnosticSignError', sign = '' };
+    W = { hl = 'DiagnosticSignWarn', sign = '' };
+    I = { hl = 'DiagnosticSignInfo', sign = '' };
+    N = { hl = 'DiagnosticSignHint', sign = '' };
+    T = { hl = 'DiagnosticSignHint', sign = '' };
+  }
 }
 
 local M = { config = defaults }
 
-local utils = require("qf.utils")
+local utils = require "qf.util"
 
 local fix_list = utils.fix_list
 local list_items = utils.list_items
@@ -64,11 +72,12 @@ local post_commands = {
 local function list_post_commands(l)
   if l == "l" then
     return vim.tbl_map(
-      -- Remove prefix c and prepend l
-      function(val) if val:sub(1,1) == 'c' then
-        return 'l'..val:sub(2)
-      else
-        return 'l' .. val end
+    -- Remove prefix c and prepend l
+      function(val) if val:sub(1, 1) == 'c' then
+          return 'l' .. val:sub(2)
+        else
+          return 'l' .. val
+        end
       end
       , post_commands)
   else
@@ -87,8 +96,9 @@ function M.setup(config)
   M.saved = {}
 
   if M.config.pretty then
+    local fmt = require "qf.format"
     vim.opt.quickfixtextfunc = "QfFormat"
-    M.setup_syntax = function() vim.cmd(utils.setup_syntax()) end
+    M.setup_syntax = function() vim.cmd(fmt.setup_syntax()) end
   else
     M.setup_syntax = function() end
   end
@@ -117,7 +127,7 @@ end
 function M.reopen(list)
   local prev = fn.win_getid(fn.winnr('#'))
   if api.nvim_buf_get_option(api.nvim_win_get_buf(0), 'filetype') ~= 'qf' or
-    api.nvim_buf_get_option(api.nvim_win_get_buf(prev), 'filetype') ~= 'qf' then
+      api.nvim_buf_get_option(api.nvim_win_get_buf(prev), 'filetype') ~= 'qf' then
     return
   end
 
@@ -303,7 +313,7 @@ local is_valid = utils.is_valid
 -- Returns the list entry currently previous to the cursor
 local function follow_prev(items, bufnr, line)
   local last_valid = 1
-  for i=1,#items do
+  for i = 1, #items do
     local j = #items - i + 1
     local item = items[j]
 
@@ -322,7 +332,7 @@ end
 local function follow_next(items, bufnr, line)
   local i = 1
   local last_valid = 1
-  for _,item in ipairs(items) do
+  for _, item in ipairs(items) do
     if is_valid(item) and item.bufnr == bufnr then
       last_valid = i
       if item.lnum >= line then
@@ -342,7 +352,7 @@ local function follow_nearest(items, bufnr, line)
   local min = nil
   local min_i = nil
 
-  for _,item in ipairs(items) do
+  for _, item in ipairs(items) do
     if is_valid(item) then
       local dist = math.abs(item.lnum - line)
 
@@ -357,7 +367,6 @@ local function follow_nearest(items, bufnr, line)
 
   return min_i
 end
-
 
 local strategy_lookup = {
   prev = follow_prev,
@@ -436,9 +445,9 @@ function M.next(list, wrap, verbose)
   end
 
   if wrap then
-    cmd ("try | :" .. list .. "next | catch | " .. list .. "first | endtry")
+    cmd("try | :" .. list .. "next | catch | " .. list .. "first | endtry")
   else
-    cmd ("try | :" .. list .. "next | catch | call nvim_err_writeln('No More Items') | endtry")
+    cmd("try | :" .. list .. "next | catch | call nvim_err_writeln('No More Items') | endtry")
   end
 end
 
@@ -455,12 +464,11 @@ function M.prev(list, wrap, verbose)
   end
 
   if wrap then
-    cmd ("try | :" .. list .. "prev | catch | " .. list .. "last | endtry")
+    cmd("try | :" .. list .. "prev | catch | " .. list .. "last | endtry")
   else
-    cmd ("try | :" .. list .. "prev | catch | call nvim_err_writeln('No More Items') | endtry")
+    cmd("try | :" .. list .. "prev | catch | call nvim_err_writeln('No More Items') | endtry")
   end
 end
-
 
 local function prev_valid(items, idx)
   while idx and idx > 1 do
@@ -474,7 +482,7 @@ local function prev_valid(items, idx)
 end
 
 local function prev_valid_wrap(items, start)
-  for i=1,#items do
+  for i = 1, #items do
     local idx = (#items + start - i - 1) % #items + 1
     if is_valid(items[idx]) then
       return idx
@@ -484,7 +492,7 @@ local function prev_valid_wrap(items, start)
 end
 
 local function next_valid_wrap(items, start)
-  for i=1,#items do
+  for i = 1, #items do
     local idx = (i + start - 1) % #items + 1
     if is_valid(items[idx]) then
       return idx
@@ -586,8 +594,8 @@ end
 
 local function prompt_name()
   local t = {}
-  for k,_ in pairs(M.saved) do
-    t[#t+1] = k
+  for k, _ in pairs(M.saved) do
+    t[#t + 1] = k
   end
 
   if #t == 0 then
@@ -718,7 +726,7 @@ function M.tally(list, title)
 
   local s = title:match("[^%-]*") .. utils.tally(list)
 
-  set_list(list, {}, "r", { title = s})
+  set_list(list, {}, "r", { title = s })
 end
 
 --- @class Filter
@@ -731,12 +739,11 @@ end
 function M.keep(list, filter)
   list = fix_list(list);
   local items = vim.tbl_filter(function(v)
-    return
-      (filter.type == nil or filter.type == v.type) and
-      (filter.text == nil or v.text:find(filter.text))
+    return (filter.type == nil or filter.type == v.type) and
+        (filter.text == nil or v.text:find(filter.text))
   end, list_items(list))
 
-  M.set(list, { items = items, open = true})
+  M.set(list, { items = items, open = true })
 end
 
 function M.sort(list)
@@ -783,7 +790,7 @@ function M.setup_autocmds(config)
   local follow = M.follow
   local open = M.open
   local close = M.close
-  for k,list in pairs({ c = config.c, l = config.l }) do
+  for k, list in pairs({ c = config.c, l = config.l }) do
     if list.auto_follow then
       au(list.follow_slow and "CursorHold" or "CursorMoved", function() follow(k, list.auto_follow, true) end)
     end
@@ -793,7 +800,7 @@ function M.setup_autocmds(config)
     end
 
     if list.focus_open then
-      au("WinEnter",  function() open(k, true) end)
+      au("WinEnter", function() open(k, true) end)
     end
 
     if list.auto_open then
