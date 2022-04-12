@@ -729,8 +729,6 @@ function qf.set(list, opts)
 
   if opts.open ~= false then
     qf.open(list, true, true)
-  else
-    qf.close(list)
   end
 end
 
