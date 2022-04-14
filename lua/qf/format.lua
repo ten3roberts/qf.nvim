@@ -73,7 +73,7 @@ function M.format_items(info)
     t[#t + 1] = rpad(header, maxl)
 
     -- Remove newlines
-    t[#t + 1] = item.text
+    t[#t + 1] = item.text:gsub("[\n\r]", " ↩ ")
 
     l[#l + 1] = table.concat(t, " ")
   end
