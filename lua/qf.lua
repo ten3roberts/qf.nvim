@@ -819,6 +819,10 @@ function qf.setup_autocmds(config)
       au("WinLeave", function() vim.defer_fn(function() close(k) end, 50) end)
     end
 
+    au("WinNew", function() vim.schedule(function() qf.reopen("l") end)
+
+    end)
+
     if list.focus_open then
       au("WinEnter", function() open(k, true) end)
     end
