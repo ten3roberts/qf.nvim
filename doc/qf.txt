@@ -66,13 +66,14 @@ Parameters~
 
 ------------------------------------------------------------------------------
                                                          *qf.open()* *Qopen* *Lopen*
-                      `qf.open`({list}, {stay}, {silent})
+                  `qf.open`({list}, {stay}, {silent}, {weak})
 Open the `quickfix` or `location` list
 If stay == true, the list will not be focused
 If auto_close is true, the list will be closed if empty, similar to cwindow
 Parameters~
 {list} `(string)`
 {stay} `(boolean)`
+{weak} `(boolean|nil)` Only open if other list kind is not open
 
 ------------------------------------------------------------------------------
                                                *qf.close()* *Qclose* *LClose* *VClose*

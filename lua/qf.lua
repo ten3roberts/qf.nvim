@@ -52,7 +52,7 @@ local list_defaults = {
 local defaults = {
   c = list_defaults,
   l = list_defaults,
-  close_other = false,
+  close_other = true,
   pretty = true,
   signs = {
     E = { hl = 'DiagnosticSignError', sign = '' };
@@ -65,11 +65,11 @@ local defaults = {
 
 local qf = { config = defaults }
 
-local utils = require "qf.util"
+local util = require "qf.util"
 
-local fix_list = utils.fix_list
-local list_items = utils.list_items
-local get_height = utils.get_height
+local fix_list = util.fix_list
+local list_items = util.list_items
+local get_height = util.get_height
 
 local post_commands = {
   'make', 'grep', 'grepadd', 'vimgrep', 'vimgrepadd',
@@ -142,7 +142,7 @@ function qf.reopen(list)
 
   list = fix_list(list)
 
-  if not utils.get_list_win(list) then
+  if util.get_list_win(list) == 0 then
     return
   end
 
@@ -159,8 +159,9 @@ function qf.reopen_all()
   reopen('l')
 end
 
-local set_list = utils.set_list
-local get_list = utils.get_list
+local set_list = util.set_list
+local get_list = util.get_list
+qf.get_list_win = util.get_list_win
 
 local function set_entry(list, idx)
   set_list(list, {}, "r", { idx = idx })
@@ -213,7 +214,7 @@ function qf.resize(list, size)
 
   local opts = qf.config[list]
 
-  local win = utils.get_list_win(list)
+  local win = util.get_list_win(list)
 
   -- Don't do anything if list isn't open
   if win == 0 then
@@ -223,7 +224,7 @@ function qf.resize(list, size)
   local height = size or get_height(list, qf.config)
   if height ~= 0 then
     api.nvim_win_set_height(win, height)
-  elseif opts.auto_close() then
+  elseif opts.auto_close then
     cmd(list .. 'close')
   end
 end
@@ -233,19 +234,26 @@ end
 --- If auto_close is true, the list will be closed if empty, similar to cwindow
 ---@param list string
 ---@param stay boolean
+---@param weak boolean|nil Only open if other list kind is not open
 ---@tag qf.open() Qopen Lopen
-function qf.open(list, stay, silent)
+function qf.open(list, stay, silent, weak)
   list = fix_list(list)
 
   local opts = qf.config[list]
   local num_items = #list_items(list)
+
+  local other
+  if list == "c" then other = "l" else other = "c" end
+  if weak == true and util.get_list_win(other) ~= 0 then
+    return
+  end
 
   -- Auto close
   if num_items == 0 then
     if silent ~= true then
       api.nvim_err_writeln("No items")
     end
-    if opts.auto_close then
+    if opts and opts.auto_close then
       cmd(list .. 'close')
       return
     end
@@ -260,7 +268,7 @@ function qf.open(list, stay, silent)
     end
   end
 
-  local win = utils.get_list_win(list)
+  local win = util.get_list_win(list)
   if win ~= 0 then
     if not istrue(stay) then
       api.nvim_set_current_win(win)
@@ -291,7 +299,7 @@ end
 function qf.toggle(list, stay)
   list = fix_list(list)
 
-  if utils.get_list_win(list) ~= 0 then
+  if util.get_list_win(list) ~= 0 then
     qf.close(list)
   else
     qf.open(list, stay)
@@ -323,7 +331,7 @@ local function clear_prompt()
   vim.api.nvim_command('normal :esc<CR>')
 end
 
-local is_valid = utils.is_valid
+local is_valid = util.is_valid
 
 -- Returns the list entry currently previous to the cursor
 local function follow_prev(items, bufnr, line)
@@ -408,7 +416,7 @@ function qf.follow(list, strategy, limit)
   local line = pos[2]
 
   -- Cursor hasn't moved to a new line since last call
-  if opts.last_line and opts.last_line == line then
+  if opts and opts.last_line and opts.last_line == line then
     return
   end
 
@@ -740,7 +748,7 @@ function qf.tally(list, title)
     title = get_list(list, { title = 1 }).title
   end
 
-  local s = title:match("[^%-]*") .. utils.tally(list)
+  local s = title:match("[^%-]*") .. util.tally(list)
 
   set_list(list, {}, "r", { title = s })
 end
