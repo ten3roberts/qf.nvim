@@ -233,7 +233,7 @@ end
 --- If stay == true, the list will not be focused
 --- If auto_close is true, the list will be closed if empty, similar to cwindow
 ---@param list string
----@param stay boolean
+---@param stay boolean|nil
 ---@param weak boolean|nil Only open if other list kind is not open
 ---@tag qf.open() Qopen Lopen
 function qf.open(list, stay, silent, weak)
