@@ -147,7 +147,6 @@ function qf.reopen(list)
   -- api.nvim_set_current_win(prev)
 
   if util.get_list_win(list) == 0 then
-    print("No lsit")
     -- return
   end
 
@@ -341,6 +340,10 @@ local function clear_prompt()
   vim.api.nvim_command('normal :esc<CR>')
 end
 
+local function linelen(bufnr, lnum)
+  return #(api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, false)[1] or "")
+end
+
 local is_valid = util.is_valid
 
 -- Returns the list entry currently previous to the cursor
@@ -361,7 +364,7 @@ local function follow_prev(items, bufnr, line, col)
         found_buf = true
         -- If the current entry is past cursor, of the entry of the cursor has been
         -- passed
-        item.col = math.min(item.col, #api.nvim_buf_get_lines(item.bufnr, item.lnum - 1, item.lnum, false)[1])
+        item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
         if item.lnum < line or (item.lnum == line and col and item.col < col) then
           return j
         end
@@ -369,17 +372,13 @@ local function follow_prev(items, bufnr, line, col)
     end
   end
 
-  if last_valid == 1 then
-    return #items
-  else
-    return last_valid - 1
-  end
+  return #items
 end
 
 -- Returns the first entry after the cursor in buf or the first entry in the
 -- buffer
 local function follow_next(items, bufnr, line, col)
-  local last_valid = 0
+  local last_valid = 1
   local found_buf = false
   for i, item in ipairs(items) do
     local valid = is_valid(item)
@@ -392,7 +391,7 @@ local function follow_next(items, bufnr, line, col)
         found_buf = true
         -- If the current entry is past cursor, of the entry of the cursor has been
         -- passed
-        item.col = math.min(item.col, #api.nvim_buf_get_lines(item.bufnr, item.lnum - 1, item.lnum, false)[1])
+        item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
         if item.lnum > line or (item.lnum == line and col and item.col > col) then
           return i
         end
@@ -400,11 +399,7 @@ local function follow_next(items, bufnr, line, col)
     end
   end
 
-  if last_valid == #items then
-    return 1
-  else
-    return last_valid + 1
-  end
+  return 1
 end
 
 -- Returns the list entry closest to the cursor vertically
