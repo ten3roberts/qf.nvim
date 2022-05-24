@@ -347,7 +347,7 @@ end
 local is_valid = util.is_valid
 
 -- Returns the list entry currently previous to the cursor
-local function follow_prev(items, bufnr, line, col)
+local function follow_prev(list, items, bufnr, line, col)
   local last_valid = 1
   local found_buf = false
   for i = 1, #items do
@@ -372,12 +372,17 @@ local function follow_prev(items, bufnr, line, col)
     end
   end
 
-  return #items
+  local cur = util.get_list(list, { idx = 0 }).idx
+  if cur > 1 then
+    return cur - 1
+  else
+    return #items
+  end
 end
 
 -- Returns the first entry after the cursor in buf or the first entry in the
 -- buffer
-local function follow_next(items, bufnr, line, col)
+local function follow_next(list, items, bufnr, line, col)
   local last_valid = 1
   local found_buf = false
   for i, item in ipairs(items) do
@@ -399,11 +404,16 @@ local function follow_next(items, bufnr, line, col)
     end
   end
 
-  return 1
+  local cur = util.get_list(list, { idx = 0 }).idx
+  if cur < #items then
+    return cur + 1
+  else
+    return 1
+  end
 end
 
 -- Returns the list entry closest to the cursor vertically
-local function follow_nearest(items, bufnr, line, col)
+local function follow_nearest(list, items, bufnr, line, col)
   local i = 1
   local min = nil
   local min_i = nil
@@ -468,7 +478,7 @@ function qf.follow(list, strategy, limit)
     return
   end
 
-  local i = strategy_func(items, bufnr, line, col)
+  local i = strategy_func(list, items, bufnr, line, col)
 
   if not items[i] or items[i].bufnr ~= bufnr then
     return
@@ -592,7 +602,7 @@ function qf.above(list, wrap, verbose)
   local line = pos[2]
   local col = pos[3]
 
-  local idx = follow_prev(items, bufnr, line, col)
+  local idx = follow_prev(list, items, bufnr, line, col)
 
   if list == 'c' then
     cmd('cc ' .. idx)
@@ -621,7 +631,7 @@ function qf.below(list, wrap, verbose)
   local line = pos[2]
   local col = pos[3]
 
-  local idx = follow_next(items, bufnr, line, col)
+  local idx = follow_next(list, items, bufnr, line, col)
 
   if list == 'c' then
     cmd('cc ' .. idx)
