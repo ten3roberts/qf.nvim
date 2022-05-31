@@ -864,7 +864,7 @@ function qf.setup_autocmds(config)
     end
 
     if list.focus_open then
-      au("WinEnter", function() open(k, true) end)
+      au("WinEnter", function() open(k, true, true) end)
     end
 
     if list.auto_open then
