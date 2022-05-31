@@ -260,7 +260,7 @@ function qf.open(list, stay, silent, weak)
   -- Auto close
   if num_items == 0 then
     if silent ~= true then
-      api.nvim_err_writeln("No items")
+      vim.notify("No items", vim.log.levels.ERROR)
     end
     if opts and opts.auto_close then
       cmd(list .. 'close')
@@ -468,7 +468,7 @@ function qf.follow(list, strategy, limit)
 
   local strategy_func = strategy_lookup[strategy or 'prev']
   if strategy_func == nil then
-    api.nvim_err_writeln("Invalid follow strategy " .. strategy)
+    vim.notify("Invalid follow strategy " .. strategy, vim.log.levels.ERROR)
     return
   end
 
@@ -514,7 +514,7 @@ function qf.next(list, wrap, verbose)
   if wrap then
     cmd("try | :" .. list .. "next | catch | " .. list .. "first | endtry")
   else
-    cmd("try | :" .. list .. "next | catch | call nvim_err_writeln('No More Items') | endtry")
+    cmd("try | :" .. list .. "next | catch | call vim.notify('No More Items', vim.log.levels.ERROR) | endtry")
   end
 end
 
@@ -534,7 +534,7 @@ function qf.prev(list, wrap, verbose)
   if wrap then
     cmd("try | :" .. list .. "prev | catch | " .. list .. "last | endtry")
   else
-    cmd("try | :" .. list .. "prev | catch | call nvim_err_writeln('No More Items') | endtry")
+    cmd("try | :" .. list .. "prev | catch | call vim.notify('No More Items', vim.log.levels.ERROR) | endtry")
   end
 end
 
@@ -577,7 +577,7 @@ local function next_valid(items, idx)
     end
   end
 
-  api.nvim_err_writeln("No more items")
+  vim.notify("No more items", vim.log.levels.ERROR)
   return nil
 end
 
@@ -654,7 +654,7 @@ local function prompt_name()
   end
 
   if #t == 0 then
-    api.nvim_err_writeln("No saved lists")
+    vim.notify("No saved lists", vim.log.levels.ERROR)
   end
 
   local choice = fn.confirm('Choose saved list', table.concat(t, '\n'))
@@ -681,7 +681,7 @@ function qf.load(list, name)
   local items = qf.saved[name]
 
   if items == nil then
-    api.nvim_err_writeln("No list saved with name: " .. name)
+    vim.notify("No list saved with name: " .. name, vim.log.levels.ERROR)
     return
   end
 
@@ -730,7 +730,7 @@ function qf.set(list, opts)
   else
   end
   if opts.lines == nil and opts.items == nil then
-    api.nvim_err_writeln("Missing either opts.lines or opts.items in qf.set()")
+    vim.notify("Missing either opts.lines or opts.items in qf.set()", vim.log.levels.ERROR)
   end
 
   if list == 'c' then
