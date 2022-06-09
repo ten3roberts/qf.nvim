@@ -3,19 +3,19 @@ local api = vim.api
 local fn = vim.fn
 
 function M.fix_list(list)
-  list = list or 'c'
+  list = list or "c"
 
-  if list == 'qf' or list == 'quickfix' or list == 'c' then
-    return 'c'
-  elseif list == 'loc' or list == 'location' or list == 'l' then
-    return 'l'
+  if list == "qf" or list == "quickfix" or list == "c" then
+    return "c"
+  elseif list == "loc" or list == "location" or list == "l" then
+    return "l"
   end
 
-  if list == 'visible' then
-    if M.get_list_win('l') ~= 0 then
-      return 'l'
+  if list == "visible" then
+    if M.get_list_win("l") ~= 0 then
+      return "l"
     else
-      return 'c'
+      return "c"
     end
   end
   api.nvim_err_writeln("Invalid list type: " .. list)
@@ -29,9 +29,8 @@ end
 
 M.is_valid = is_valid
 
-
 function M.set_list(list, items, mode, opts)
-  if list == 'c' then
+  if list == "c" then
     return fn.setqflist(items, mode, opts)
   else
     return fn.setloclist(".", items, mode, opts)
@@ -40,7 +39,7 @@ end
 
 function M.get_list(list, what, winid)
   what = what or { items = 1 }
-  if list == 'c' then
+  if list == "c" then
     return fn.getqflist(what)
   else
     return fn.getloclist(winid or ".", what)
@@ -50,11 +49,17 @@ end
 function M.get_list_win(list)
   list = M.fix_list(list)
   local tabnr = fn.tabpagenr()
-  if list == 'c' then
-    local w = vim.tbl_filter(function(t) return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0 end, fn.getwininfo())[1]
-    if w then return w.winid else return 0 end
+  if list == "c" then
+    local w = vim.tbl_filter(function(t)
+      return t.tabnr == tabnr and t.quickfix == 1 and t.loclist == 0
+    end, fn.getwininfo())[1]
+    if w then
+      return w.winid
+    else
+      return 0
+    end
   else
-    return vim.fn.getloclist(0, { winid = 0 })['winid'] or 0
+    return vim.fn.getloclist(0, { winid = 0 })["winid"] or 0
   end
 end
 
@@ -75,23 +80,23 @@ function M.get_height(list, config)
   end
 
   local size = 0
-  if list == 'c' then
+  if list == "c" then
     size = fn.getqflist({ size = 1 }).size
   else
-    size = fn.getloclist('.', { size = 1 }).size
+    size = fn.getloclist(".", { size = 1 }).size
   end
 
   return math.max(math.min(size, opts.max_height), opts.min_height)
 end
 
 function M.tally(list)
-  local d = require "qf".config.signs;
+  local d = require("qf").config.signs
   d = {
     d.E,
     d.W,
     d.I,
     d.N,
-    d.T
+    d.T,
   }
   -- Tally
   local E = 0
@@ -122,7 +127,7 @@ function M.tally(list)
   for i, v in ipairs(tally) do
     if v > 0 then
       local severity = d[i]
-      t[#t + 1] = "%#" .. severity.hl .. "#" .. severity.sign .. ' ' .. v
+      t[#t + 1] = "%#" .. severity.hl .. "#" .. severity.sign .. " " .. v
     end
   end
 

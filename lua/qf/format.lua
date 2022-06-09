@@ -1,9 +1,11 @@
 local syntax_cache
-local fn = vim.fn;
+local fn = vim.fn
 
 local M = {}
 function M.setup_syntax()
-  if syntax_cache then return syntax_cache end
+  if syntax_cache then
+    return syntax_cache
+  end
 
   local template = [[
     syn match QfError "^%s" nextgroup=QfPath
@@ -25,13 +27,22 @@ function M.setup_syntax()
     hi link QfPath     Directory
   ]]
 
-  local config = require "qf".config
-  local d = config.signs;
+  local config = require("qf").config
+  local d = config.signs
   local sum = d.E.sign .. d.W.sign .. d.I.sign .. d.N.sign .. d.T.sign .. " "
   syntax_cache = string.format(
-    template, d.E.sign, d.W.sign, d.I.sign, d.N.sign, d.T.sign,
+    template,
+    d.E.sign,
+    d.W.sign,
+    d.I.sign,
+    d.N.sign,
+    d.T.sign,
     sum,
-    d.E.hl, d.W.hl, d.I.hl, d.N.hl, d.T.hl
+    d.E.hl,
+    d.W.hl,
+    d.I.hl,
+    d.N.hl,
+    d.T.hl
   )
   return syntax_cache
 end
@@ -45,12 +56,12 @@ local function rpad(s, len)
   end
 end
 
-local util = require "qf.util"
+local util = require("qf.util")
 
 function M.format_items(info)
-  local items = util.get_list(info.quickfix == 1 and "c" or "l", { i = info.id, items = 1 }, info.winid).items;
+  local items = util.get_list(info.quickfix == 1 and "c" or "l", { i = info.id, items = 1 }, info.winid).items
 
-  local signs = require "qf".config.signs
+  local signs = require("qf").config.signs
   local l = {}
 
   local maxl = 0
@@ -58,7 +69,7 @@ function M.format_items(info)
   for _, item in ipairs(items) do
     local icon
 
-    icon = (signs[item.type])
+    icon = signs[item.type]
     icon = icon and icon.sign or " "
 
     local t = {}
@@ -67,7 +78,9 @@ function M.format_items(info)
       t[#t + 1] = icon
     end
 
-    local header = (item.bufnr ~= 0 and fn.bufname(item.bufnr) or " ") .. (item.lnum ~= 0 and ":" .. item.lnum or " ") .. (item.col ~= 0 and ":" .. item.col or "")
+    local header = (item.bufnr ~= 0 and fn.bufname(item.bufnr) or " ")
+      .. (item.lnum ~= 0 and ":" .. item.lnum or " ")
+      .. (item.col ~= 0 and ":" .. item.col or "")
     maxl = math.max(maxl, #header)
     -- end
     t[#t + 1] = rpad(header, maxl)
@@ -77,7 +90,6 @@ function M.format_items(info)
 
     l[#l + 1] = table.concat(t, " ")
   end
-
 
   return l
 end

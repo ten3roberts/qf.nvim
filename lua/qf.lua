@@ -28,7 +28,7 @@ local wo = vim.wo
 ---@field focus_open boolean Pair with `unfocus_close`, open list when parent window focuses
 local list_defaults = {
   auto_close = true,
-  auto_follow = 'prev',
+  auto_follow = "prev",
   auto_follow_limit = 8,
   follow_slow = true,
   auto_open = true,
@@ -55,58 +55,73 @@ local defaults = {
   close_other = true,
   pretty = true,
   signs = {
-    E = { hl = 'DiagnosticSignError', sign = '' };
-    W = { hl = 'DiagnosticSignWarn', sign = '' };
-    I = { hl = 'DiagnosticSignInfo', sign = '' };
-    N = { hl = 'DiagnosticSignHint', sign = '' };
-    T = { hl = 'DiagnosticSignHint', sign = '' };
-  }
+    E = { hl = "DiagnosticSignError", sign = "" },
+    W = { hl = "DiagnosticSignWarn", sign = "" },
+    I = { hl = "DiagnosticSignInfo", sign = "" },
+    N = { hl = "DiagnosticSignHint", sign = "" },
+    T = { hl = "DiagnosticSignHint", sign = "" },
+  },
 }
 
 local qf = { config = defaults }
 
-local util = require "qf.util"
+local util = require("qf.util")
 
 local fix_list = util.fix_list
 local list_items = util.list_items
 local get_height = util.get_height
 
 local post_commands = {
-  'make', 'grep', 'grepadd', 'vimgrep', 'vimgrepadd',
-  'cfile', 'cgetfile', 'caddfile', 'cexpr', 'cgetexpr',
-  'caddexpr', 'cbuffer', 'cgetbuffer', 'caddbuffer'
+  "make",
+  "grep",
+  "grepadd",
+  "vimgrep",
+  "vimgrepadd",
+  "cfile",
+  "cgetfile",
+  "caddfile",
+  "cexpr",
+  "cgetexpr",
+  "caddexpr",
+  "cbuffer",
+  "cgetbuffer",
+  "caddbuffer",
 }
 
 local function list_post_commands(l)
   if l == "l" then
     return vim.tbl_map(
-    -- Remove prefix c and prepend l
-      function(val) if val:sub(1, 1) == 'c' then
-          return 'l' .. val:sub(2)
+      -- Remove prefix c and prepend l
+      function(val)
+        if val:sub(1, 1) == "c" then
+          return "l" .. val:sub(2)
         else
-          return 'l' .. val
+          return "l" .. val
         end
-      end
-      , post_commands)
+      end,
+      post_commands
+    )
   else
     return post_commands
   end
 end
 
 local function istrue(val)
-  return val == true or val == '1'
+  return val == true or val == "1"
 end
 
 --- Initialize and configure qf.nvim using the provided config.
 ---@param config Config
 function qf.setup(config)
-  qf.config = vim.tbl_deep_extend('force', defaults, config or {})
+  qf.config = vim.tbl_deep_extend("force", defaults, config or {})
   qf.saved = {}
 
   if qf.config.pretty then
-    local fmt = require "qf.format"
+    local fmt = require("qf.format")
     vim.opt.quickfixtextfunc = "QfFormat"
-    qf.setup_syntax = function() vim.cmd(fmt.setup_syntax()) end
+    qf.setup_syntax = function()
+      vim.cmd(fmt.setup_syntax())
+    end
   else
     qf.setup_syntax = function() end
   end
@@ -114,12 +129,14 @@ function qf.setup(config)
 end
 
 local function printv(msg, verbose)
-  if istrue(verbose) ~= false then print(msg) end
+  if istrue(verbose) ~= false then
+    print(msg)
+  end
 end
 
 local function check_empty(list, num_items, verbose)
   if num_items == 0 then
-    if list == 'c' then
+    if list == "c" then
       printv("Quickfix list empty", verbose)
       return false
     else
@@ -135,14 +152,13 @@ end
 ---@param list string
 function qf.reopen(list)
   -- local prev = fn.win_getid(fn.winnr('#'))
-  if api.nvim_buf_get_option(0, 'filetype') == 'qf' or
-      api.nvim_buf_get_option(0, "buftype") ~= "" then
+  if api.nvim_buf_get_option(0, "filetype") == "qf" or api.nvim_buf_get_option(0, "buftype") ~= "" then
     return
   end
 
   list = fix_list(list)
 
-  local new = api.nvim_get_current_win();
+  local new = api.nvim_get_current_win()
 
   -- api.nvim_set_current_win(prev)
 
@@ -153,9 +169,16 @@ function qf.reopen(list)
   print("Reopening window: " .. list)
 
   api.nvim_exec(
-    string.format([[
+    string.format(
+      [[
   noau %sclose
-  ]] , list, list, get_height(list, qf.config)), false)
+  ]],
+      list,
+      list,
+      get_height(list, qf.config)
+    ),
+    false
+  )
 
   -- api.nvim_set_current_win(new)
 
@@ -164,8 +187,8 @@ end
 
 function qf.reopen_all()
   local reopen = qf.reopen
-  reopen('c')
-  reopen('l')
+  reopen("c")
+  reopen("l")
 end
 
 local set_list = util.set_list
@@ -187,11 +210,11 @@ function qf.on_ft(winid)
   end
 
   if wininfo[1].quickfix == 1 then
-    list = 'c'
+    list = "c"
   end
 
   if wininfo[1].loclist == 1 then
-    list = 'l'
+    list = "l"
   end
 
   if list == nil then
@@ -210,7 +233,7 @@ function qf.on_ft(winid)
   end
 
   if opts.wide then
-    cmd "wincmd J"
+    cmd("wincmd J")
   end
 end
 
@@ -234,7 +257,7 @@ function qf.resize(list, size)
   if height ~= 0 then
     api.nvim_win_set_height(win, height)
   elseif opts.auto_close then
-    cmd(list .. 'close')
+    cmd(list .. "close")
   end
 end
 
@@ -252,7 +275,11 @@ function qf.open(list, stay, silent, weak)
   local num_items = #list_items(list)
 
   local other
-  if list == "c" then other = "l" else other = "c" end
+  if list == "c" then
+    other = "l"
+  else
+    other = "c"
+  end
   if weak == true and util.get_list_win(other) ~= 0 then
     return
   end
@@ -263,17 +290,17 @@ function qf.open(list, stay, silent, weak)
       vim.notify("No items", vim.log.levels.ERROR)
     end
     if opts and opts.auto_close then
-      cmd(list .. 'close')
+      cmd(list .. "close")
       return
     end
     return
   end
 
   if qf.config.close_other then
-    if list == 'c' then
-      cmd 'lclose'
-    elseif list == 'l' then
-      cmd 'cclose'
+    if list == "c" then
+      cmd("lclose")
+    elseif list == "l" then
+      cmd("cclose")
     end
   end
 
@@ -284,10 +311,10 @@ function qf.open(list, stay, silent, weak)
     end
     return
   end
-  cmd(list .. 'open ' .. get_height(list, qf.config))
+  cmd(list .. "open " .. get_height(list, qf.config))
 
   if istrue(stay) then
-    cmd "wincmd p"
+    cmd("wincmd p")
   end
 end
 
@@ -297,7 +324,7 @@ end
 function qf.close(list)
   list = fix_list(list)
 
-  cmd(list .. 'close')
+  cmd(list .. "close")
 end
 
 --- Toggle `list`
@@ -313,7 +340,6 @@ function qf.toggle(list, stay)
   else
     qf.open(list, stay)
   end
-
 end
 
 --- Clears the quickfix or current location list
@@ -327,17 +353,17 @@ function qf.clear(list, name)
     qf.save(list, name)
   end
 
-  if list == 'c' then
+  if list == "c" then
     fn.setqflist({})
   else
-    fn.setloclist('.', {})
+    fn.setloclist(".", {})
   end
 
   qf.open(list, 0)
 end
 
 local function clear_prompt()
-  vim.api.nvim_command('normal :esc<CR>')
+  vim.api.nvim_command("normal :esc<CR>")
 end
 
 local function linelen(bufnr, lnum)
@@ -443,16 +469,15 @@ local strategy_lookup = {
 --- - 'nearest'
 ---@param limit number|nil Don't select entry further away than limit.
 function qf.follow(list, strategy, limit)
-  if api.nvim_get_mode().mode ~= 'n' then
+  if api.nvim_get_mode().mode ~= "n" then
     return
   end
 
   list = fix_list(list)
   local opts = qf.config[list]
 
-
-  local bufnr = fn.bufnr('%')
-  local pos = fn.getpos('.')
+  local bufnr = fn.bufnr("%")
+  local pos = fn.getpos(".")
   local line = pos[2]
   local col = pos[3]
 
@@ -463,7 +488,7 @@ function qf.follow(list, strategy, limit)
 
   opts.last_line = line
 
-  local strategy_func = strategy_lookup[strategy or 'prev']
+  local strategy_func = strategy_lookup[strategy or "prev"]
   if strategy_func == nil then
     vim.notify("Invalid follow strategy " .. strategy, vim.log.levels.ERROR)
     return
@@ -481,7 +506,7 @@ function qf.follow(list, strategy, limit)
     return
   end
 
-  if type(limit == 'boolean') and limit == true then
+  if type(limit == "boolean") and limit == true then
     limit = opts.auto_follow_limit
   end
 
@@ -594,17 +619,17 @@ function qf.above(list, wrap, verbose)
     return
   end
 
-  local bufnr = fn.bufnr('%')
-  local pos = fn.getpos('.')
+  local bufnr = fn.bufnr("%")
+  local pos = fn.getpos(".")
   local line = pos[2]
   local col = pos[3]
 
   local idx = follow_prev(list, items, bufnr, line, col)
 
-  if list == 'c' then
-    cmd('cc ' .. idx)
+  if list == "c" then
+    cmd("cc " .. idx)
   else
-    cmd('ll ' .. idx)
+    cmd("ll " .. idx)
   end
 end
 
@@ -623,17 +648,17 @@ function qf.below(list, wrap, verbose)
     return
   end
 
-  local bufnr = fn.bufnr('%')
-  local pos = fn.getpos('.')
+  local bufnr = fn.bufnr("%")
+  local pos = fn.getpos(".")
   local line = pos[2]
   local col = pos[3]
 
   local idx = follow_next(list, items, bufnr, line, col)
 
-  if list == 'c' then
-    cmd('cc ' .. idx)
+  if list == "c" then
+    cmd("cc " .. idx)
   else
-    cmd('ll ' .. idx)
+    cmd("ll " .. idx)
   end
 end
 
@@ -654,7 +679,7 @@ local function prompt_name()
     vim.notify("No saved lists", vim.log.levels.ERROR)
   end
 
-  local choice = fn.confirm('Choose saved list', table.concat(t, '\n'))
+  local choice = fn.confirm("Choose saved list", table.concat(t, "\n"))
   if choice == nil then
     return nil
   end
@@ -682,10 +707,10 @@ function qf.load(list, name)
     return
   end
 
-  if list == 'c' then
+  if list == "c" then
     fn.setqflist(items)
   else
-    fn.setloclist('.', items)
+    fn.setloclist(".", items)
   end
 
   if qf.config[list].auto_open then
@@ -711,7 +736,7 @@ end
 function qf.set(list, opts)
   list = fix_list(list)
 
-  local old_c = vim.b.current_compiler;
+  local old_c = vim.b.current_compiler
 
   local old_efm = vim.opt.efm
 
@@ -730,14 +755,14 @@ function qf.set(list, opts)
     vim.notify("Missing either opts.lines or opts.items in qf.set()", vim.log.levels.ERROR)
   end
 
-  if list == 'c' then
-    vim.fn.setqflist({}, 'r', {
+  if list == "c" then
+    vim.fn.setqflist({}, "r", {
       title = opts.title,
       items = opts.items,
-      lines = opts.lines
+      lines = opts.lines,
     })
   else
-    vim.fn.setloclist(opts.winid or 0, {}, 'r', {
+    vim.fn.setloclist(opts.winid or 0, {}, "r", {
       title = opts.title,
       items = opts.items,
       lines = opts.lines,
@@ -780,13 +805,10 @@ function qf.tally(list, title)
 end
 
 function qf.filter_text(list, pat)
-  list = fix_list(list);
-  local items = vim.tbl_filter(
-    function(item)
-      return item.text:find(pat, 1, true) or
-          vim.fn.bufname(item.bufnr):find(pat, 1, true)
-    end,
-    list_items(list))
+  list = fix_list(list)
+  local items = vim.tbl_filter(function(item)
+    return item.text:find(pat, 1, true) or vim.fn.bufname(item.bufnr):find(pat, 1, true)
+  end, list_items(list))
 
   qf.set(list, { items = items, open = true, tally = true })
 end
@@ -796,7 +818,7 @@ end
 ---@param filter function
 ---@tag qf.keep() VkeepText QkeepText LkeepText VkeepType QkeepType LkeepType
 function qf.filter(list, filter)
-  list = fix_list(list);
+  list = fix_list(list)
   local items = vim.tbl_filter(filter, list_items(list))
 
   qf.set(list, { items = items, open = true, tally = true })
@@ -849,23 +871,37 @@ function qf.setup_autocmds(config)
   local open = qf.open
   local close = qf.close
 
-  au("WinClosed", function() if vim.o.ft ~= "ft" then vim.cmd("lclose") end end)
+  au("WinClosed", function()
+    if vim.o.ft ~= "ft" then
+      vim.cmd("lclose")
+    end
+  end)
 
   for k, list in pairs({ c = config.c, l = config.l }) do
     if list.auto_follow then
-      au(list.follow_slow and "CursorHold" or "CursorMoved", function() follow(k, list.auto_follow, true) end)
+      au(list.follow_slow and "CursorHold" or "CursorMoved", function()
+        follow(k, list.auto_follow, true)
+      end)
     end
 
     if list.unfocus_close then
-      au("WinLeave", function() vim.defer_fn(function() close(k) end, 50) end)
+      au("WinLeave", function()
+        vim.defer_fn(function()
+          close(k)
+        end, 50)
+      end)
     end
 
     if list.focus_open then
-      au("WinEnter", function() open(k, true, true) end)
+      au("WinEnter", function()
+        open(k, true, true)
+      end)
     end
 
     if list.auto_open then
-      au("QuickFixCmdPost", function() open(k, true, true) end, { pattern = list_post_commands(k) })
+      au("QuickFixCmdPost", function()
+        open(k, true, true)
+      end, { pattern = list_post_commands(k) })
     end
   end
 end
