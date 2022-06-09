@@ -356,7 +356,6 @@ local function follow_prev(list, items, bufnr, line, col)
 
     local valid = is_valid(item)
     if valid then
-      last_valid = j
       -- We overshot the current buffer
       if found_buf and item.bufnr ~= bufnr then
         return j
@@ -365,7 +364,7 @@ local function follow_prev(list, items, bufnr, line, col)
         -- If the current entry is past cursor, of the entry of the cursor has been
         -- passed
         item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
-        if item.lnum < line or (item.lnum == line and col and item.col < col) then
+        if item.lnum < line or (item.lnum == line and (item.col > 0 and col and item.col < col)) then
           return j
         end
       end
@@ -383,12 +382,10 @@ end
 -- Returns the first entry after the cursor in buf or the first entry in the
 -- buffer
 local function follow_next(list, items, bufnr, line, col)
-  local last_valid = 1
   local found_buf = false
   for i, item in ipairs(items) do
     local valid = is_valid(item)
     if valid then
-      last_valid = i
       -- We overshot the current buffer
       if found_buf and item.bufnr ~= bufnr then
         return i
@@ -397,7 +394,7 @@ local function follow_next(list, items, bufnr, line, col)
         -- If the current entry is past cursor, of the entry of the cursor has been
         -- passed
         item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
-        if item.lnum > line or (item.lnum == line and col and item.col > col) then
+        if item.lnum > line or (item.lnum == line and (item.col > 0 and col and item.col > col)) then
           return i
         end
       end
