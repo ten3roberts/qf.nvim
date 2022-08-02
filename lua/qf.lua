@@ -69,6 +69,7 @@ local util = require("qf.util")
 
 local fix_list = util.fix_list
 local list_items = util.list_items
+local valid_list_items = util.valid_list_items
 local get_height = util.get_height
 
 local post_commands = {
@@ -158,12 +159,8 @@ function qf.reopen(list)
 
   list = fix_list(list)
 
-  local new = api.nvim_get_current_win()
-
-  -- api.nvim_set_current_win(prev)
-
   if util.get_list_win(list) == 0 then
-    -- return
+    return
   end
 
   print("Reopening window: " .. list)
@@ -272,7 +269,7 @@ function qf.open(list, stay, silent, weak)
   list = fix_list(list)
 
   local opts = qf.config[list]
-  local num_items = #list_items(list)
+  local num_items = get_list(list, { size = 1 }).size
 
   local other
   if list == "c" then
@@ -319,7 +316,7 @@ function qf.open(list, stay, silent, weak)
 end
 
 --- Close `list`
---- @param list List
+--- @param list string
 ---@tag qf.close() Qclose LClose VClose
 function qf.close(list)
   list = fix_list(list)
@@ -374,69 +371,56 @@ local is_valid = util.is_valid
 
 -- Returns the list entry currently previous to the cursor
 local function follow_prev(list, items, bufnr, line, col)
-  local last_valid = 1
   local found_buf = false
   for i = 1, #items do
     local j = #items - i + 1
     local item = items[j]
 
-    local valid = is_valid(item)
-    if valid then
-      -- We overshot the current buffer
-      if found_buf and item.bufnr ~= bufnr then
-        return j
-      elseif item.bufnr == bufnr then
-        found_buf = true
-        -- If the current entry is past cursor, of the entry of the cursor has been
-        -- passed
-        item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
-        if item.lnum < line or (item.lnum == line and (item.col > 0 and col and item.col < col)) then
-          return j
-        end
+    -- We overshot the current buffer
+    if found_buf or item.bufnr == bufnr then
+      found_buf = true
+      -- If the current entry is past cursor, of the entry of the cursor has been
+      -- passed
+      item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
+      if
+        item.bufnr ~= bufnr
+        or item.lnum < line
+        or (item.lnum == line and (item.col > 0 and col and item.col < col))
+      then
+        return item.idx
       end
     end
   end
 
-  local cur = util.get_list(list, { idx = 0 }).idx
-  if cur > 1 then
-    return cur - 1
-  else
-    return #items
-  end
+  return get_list(list, { size = 1 }).size
 end
 
 -- Returns the first entry after the cursor in buf or the first entry in the
 -- buffer
 local function follow_next(list, items, bufnr, line, col)
   local found_buf = false
-  for i, item in ipairs(items) do
-    local valid = is_valid(item)
-    if valid then
-      -- We overshot the current buffer
-      if found_buf and item.bufnr ~= bufnr then
-        return i
-      elseif item.bufnr == bufnr then
-        found_buf = true
-        -- If the current entry is past cursor, of the entry of the cursor has been
-        -- passed
-        item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
-        if item.lnum > line or (item.lnum == line and (item.col > 0 and col and item.col > col)) then
-          return i
-        end
+  for _, item in ipairs(items) do
+    -- We overshot the current buffer
+    if found_buf or item.bufnr == bufnr then
+      found_buf = true
+      -- If the current entry is past cursor, of the entry of the cursor has been
+      -- passed
+      item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
+      if
+        item.bufnr ~= bufnr
+        or item.lnum > line
+        or (item.lnum == line and (item.col > 0 and col and item.col > col))
+      then
+        return item.idx
       end
     end
   end
 
-  local cur = util.get_list(list, { idx = 0 }).idx
-  if cur < #items then
-    return cur + 1
-  else
-    return 1
-  end
+  return 1
 end
 
 -- Returns the list entry closest to the cursor vertically
-local function follow_nearest(list, items, bufnr, line, col)
+local function follow_nearest(_, items, bufnr, line, col)
   local i = 1
   local min = nil
   local min_i = nil
@@ -560,49 +544,6 @@ function qf.prev(list, wrap, verbose)
   end
 end
 
-local function prev_valid(items, idx)
-  while idx and idx > 1 do
-    idx = idx - 1
-    if is_valid(items[idx]) then
-      return idx
-    end
-  end
-
-  return idx
-end
-
-local function prev_valid_wrap(items, start)
-  for i = 1, #items do
-    local idx = (#items + start - i - 1) % #items + 1
-    if is_valid(items[idx]) then
-      return idx
-    end
-  end
-  return 1
-end
-
-local function next_valid_wrap(items, start)
-  for i = 1, #items do
-    local idx = (i + start - 1) % #items + 1
-    if is_valid(items[idx]) then
-      return idx
-    end
-  end
-  return 1
-end
-
-local function next_valid(items, idx)
-  while idx and idx <= #items - 1 do
-    idx = idx + 1
-    if is_valid(items[idx]) then
-      return idx
-    end
-  end
-
-  vim.notify("No more items", vim.log.levels.ERROR)
-  return nil
-end
-
 --- Wrapping version of [lc]above
 --- Will switch buffer
 ---@tag qf.above() Qabove Labove Vabove
@@ -613,7 +554,7 @@ function qf.above(list, wrap, verbose)
 
   list = fix_list(list)
 
-  local items = list_items(list, true)
+  local items = valid_list_items(list)
 
   if not check_empty(list, #items, verbose) then
     return
@@ -642,7 +583,7 @@ function qf.below(list, wrap, verbose)
   end
   list = fix_list(list)
 
-  local items = list_items(list, true)
+  local items = valid_list_items(list)
 
   if not check_empty(list, #items, verbose) then
     return
@@ -726,7 +667,7 @@ end
 ---@field winid number|nil
 ---@field title string|nil
 ---@field tally boolean|nil
----@field open boolean
+---@field open boolean|nil if not specified, open if there are errors
 
 --- Set location or quickfix list items
 --- If a compiler is given, the items will be parsed from it
@@ -776,8 +717,9 @@ function qf.set(list, opts)
     vim.cmd("compiler " .. old_c)
   end
 
+  local tally = util.tally(list)
   if opts.tally then
-    qf.tally(list, opts.title or "")
+    qf.tally(list, opts.title or "", tally)
   end
 
   qf.config[list].last_line = nil
@@ -786,22 +728,52 @@ function qf.set(list, opts)
     api.nvim_set_current_dir(old_cwd)
   end
 
-  if opts.open ~= false then
+  if opts.open == true or (opts.open == nil and tally[1] > 0) then
     qf.open(list, true, true)
   end
 end
 
 --- Suffix the chosen list with a summary of the classified number of entries
-function qf.tally(list, title)
+---@param list string
+---@param title string|nil
+---@param tally integer[]|nil
+function qf.tally(list, title, tally)
   list = fix_list(list)
 
+  local info = get_list(list, { title = 1, id = 0 })
+
   if title == nil then
-    title = get_list(list, { title = 1 }).title
+    title = info.title
   end
 
-  local s = title:match("[^%-]*") .. util.tally(list)
+  tally = tally or util.tally(list)
 
-  set_list(list, {}, "r", { title = s })
+  local d = require("qf").config.signs
+  d = {
+    d.E,
+    d.W,
+    d.I,
+    d.N,
+    d.T,
+  }
+
+  local total_count = 0
+  local t = {}
+  for i, v in ipairs(tally) do
+    if v > 0 then
+      total_count = total_count + 1
+      local severity = d[i]
+      t[#t + 1] = "%#" .. severity.hl .. "#" .. severity.sign .. " " .. v
+    end
+  end
+
+  local tally_str = " - " .. table.concat(t, " ") .. "%#Normal#"
+
+  if total_count > 0 then
+    local s = title:match("[^%-]*%s?") .. tally_str
+
+    set_list(list, {}, "r", { title = s })
+  end
 end
 
 function qf.filter_text(list, pat)
@@ -880,7 +852,7 @@ function qf.setup_autocmds(config)
   for k, list in pairs({ c = config.c, l = config.l }) do
     if list.auto_follow then
       au(list.follow_slow and "CursorHold" or "CursorMoved", function()
-        follow(k, list.auto_follow, true)
+        follow(k, list.auto_follow, 16)
       end)
     end
 

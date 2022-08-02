@@ -19,7 +19,7 @@ function M.fix_list(list)
     end
   end
   api.nvim_err_writeln("Invalid list type: " .. list)
-  return nil
+  return "c"
 end
 
 -- Returns true if the current item is valid by having valid == 1 and a valid bufnr and line number
@@ -72,6 +72,20 @@ function M.list_items(list, all)
   end
 end
 
+function M.valid_list_items(list)
+  local items = M.get_list(list).items
+  local t = {}
+
+  for i, v in ipairs(items) do
+    if is_valid(v) then
+      v.idx = i
+      t[#t + 1] = v
+    end
+  end
+
+  return t
+end
+
 function M.get_height(list, config)
   local opts = config[list]
 
@@ -79,60 +93,40 @@ function M.get_height(list, config)
     return opts.max_height
   end
 
-  local size = 0
-  if list == "c" then
-    size = fn.getqflist({ size = 1 }).size
-  else
-    size = fn.getloclist(".", { size = 1 }).size
-  end
+  local size = M.get_list(list, { size = 1 }).size
 
   return math.max(math.min(size, opts.max_height), opts.min_height)
 end
 
+---comment
+---@param list any
+---@return integer[]
 function M.tally(list)
-  local d = require("qf").config.signs
-  d = {
-    d.E,
-    d.W,
-    d.I,
-    d.N,
-    d.T,
-  }
   -- Tally
-  local E = 0
-  local W = 0
-  local I = 0
-  local N = 0
-  local T = 0
+  local error = 0
+  local warn = 0
+  local information = 0
+  local hint = 0
+  local text = 0
 
   local sevs = {}
 
-  for _, v in ipairs(M.list_items(list)) do
+  for _, v in ipairs(M.list_items(list, false)) do
     sevs[v.type] = (sevs[v.type] or 0) + 1
     if v.type == "E" then
-      E = E + 1
+      error = error + 1
     elseif v.type == "W" then
-      W = W + 1
+      warn = warn + 1
     elseif v.type == "I" then
-      I = I + 1
+      information = information + 1
     elseif v.type == "N" then
-      N = N + 1
+      hint = hint + 1
     else
-      T = T + 1
+      text = text + 1
     end
   end
 
-  local tally = { E, W, I, N, T }
-  local t = {}
-  for i, v in ipairs(tally) do
-    if v > 0 then
-      local severity = d[i]
-      t[#t + 1] = "%#" .. severity.hl .. "#" .. severity.sign .. " " .. v
-    end
-  end
-
-  -- return table.concat(t, " | ")
-  return " - " .. table.concat(t, " ") .. "%#Normal#"
+  return { error, warn, information, hint, text }
 end
 
 return M
