@@ -326,7 +326,7 @@ end
 
 --- Toggle `list`
 --- If stay == true, the list will not be focused
----@param list List
+---@param list string
 ---@param stay boolean Do not focus the opened list
 ---@tag qf.toggle() QToggle LToggle
 function qf.toggle(list, stay)
@@ -340,7 +340,7 @@ function qf.toggle(list, stay)
 end
 
 --- Clears the quickfix or current location list
----@param list List
+---@param list string
 ---@param name string|nil save the list before clearing under name
 ---@tag qf.clear() Qclear Lclear
 function qf.clear(list, name)
@@ -356,7 +356,7 @@ function qf.clear(list, name)
     fn.setloclist(".", {})
   end
 
-  qf.open(list, 0)
+  qf.open(list, true)
 end
 
 local function clear_prompt()
@@ -370,7 +370,7 @@ end
 local is_valid = util.is_valid
 
 -- Returns the list entry currently previous to the cursor
-local function follow_prev(list, items, bufnr, line, col)
+local function follow_prev(items, bufnr, line, col)
   local found_buf = false
   for i = 1, #items do
     local j = #items - i + 1
@@ -392,12 +392,12 @@ local function follow_prev(list, items, bufnr, line, col)
     end
   end
 
-  return get_list(list, { size = 1 }).size
+  return items[#items].idx or 1
 end
 
 -- Returns the first entry after the cursor in buf or the first entry in the
 -- buffer
-local function follow_next(list, items, bufnr, line, col)
+local function follow_next(items, bufnr, line, col)
   local found_buf = false
   for _, item in ipairs(items) do
     -- We overshot the current buffer
@@ -416,11 +416,11 @@ local function follow_next(list, items, bufnr, line, col)
     end
   end
 
-  return 1
+  return items[1].idx or 1
 end
 
 -- Returns the list entry closest to the cursor vertically
-local function follow_nearest(_, items, bufnr, line, col)
+local function follow_nearest(items, bufnr, line, col)
   local i = 1
   local min = nil
   local min_i = nil
@@ -453,7 +453,7 @@ local strategy_lookup = {
 --- - 'nearest'
 ---@param limit number|nil Don't select entry further away than limit.
 function qf.follow(list, strategy, limit)
-  if api.nvim_get_mode().mode ~= "n" then
+  if api.nvim_get_mode().mode ~= "n" or vim.o.buftype == "quickfix" then
     return
   end
 
@@ -484,7 +484,7 @@ function qf.follow(list, strategy, limit)
     return
   end
 
-  local i = strategy_func(list, items, bufnr, line, col)
+  local i = strategy_func(items, bufnr, line, col)
 
   if not items[i] or items[i].bufnr ~= bufnr then
     return
@@ -565,7 +565,7 @@ function qf.above(list, wrap, verbose)
   local line = pos[2]
   local col = pos[3]
 
-  local idx = follow_prev(list, items, bufnr, line, col)
+  local idx = follow_prev(items, bufnr, line, col)
 
   if list == "c" then
     cmd("cc " .. idx)
@@ -594,7 +594,7 @@ function qf.below(list, wrap, verbose)
   local line = pos[2]
   local col = pos[3]
 
-  local idx = follow_next(list, items, bufnr, line, col)
+  local idx = follow_next(items, bufnr, line, col)
 
   if list == "c" then
     cmd("cc " .. idx)
