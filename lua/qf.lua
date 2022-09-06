@@ -69,7 +69,6 @@ local util = require("qf.util")
 
 local fix_list = util.fix_list
 local list_items = util.list_items
-local valid_list_items = util.valid_list_items
 local get_height = util.get_height
 
 local post_commands = {
@@ -370,7 +369,11 @@ end
 local is_valid = util.is_valid
 
 -- Returns the list entry currently previous to the cursor
-local function follow_prev(items, bufnr, line, col)
+local function follow_prev(list, bufnr, line, col)
+  local items = util.sorted_list_items(list)
+  if #items == 0 then
+    return nil
+  end
   local found_buf = false
   for i = 1, #items do
     local j = #items - i + 1
@@ -392,12 +395,18 @@ local function follow_prev(items, bufnr, line, col)
     end
   end
 
+  print(vim.inspect(items))
   return items[#items].idx or 1
 end
 
 -- Returns the first entry after the cursor in buf or the first entry in the
 -- buffer
-local function follow_next(items, bufnr, line, col)
+local function follow_next(list, bufnr, line, col)
+  local items = util.sorted_list_items(list)
+  if #items == 0 then
+    return nil
+  end
+
   local found_buf = false
   for _, item in ipairs(items) do
     -- We overshot the current buffer
@@ -420,7 +429,11 @@ local function follow_next(items, bufnr, line, col)
 end
 
 -- Returns the list entry closest to the cursor vertically
-local function follow_nearest(items, bufnr, line, col)
+local function follow_nearest(list, bufnr, line, col)
+  local items = util.sorted_list_items(list)
+  if #items == 0 then
+    return nil
+  end
   local i = 1
   local min = nil
   local min_i = nil
@@ -478,25 +491,18 @@ function qf.follow(list, strategy, limit)
     return
   end
 
-  local items = list_items(list)
+  local i = strategy_func(list, bufnr, line, col)
 
-  if #items == 0 then
+  if not i then
     return
   end
-
-  local i = strategy_func(items, bufnr, line, col)
-
-  if not items[i] or items[i].bufnr ~= bufnr then
-    return
-  end
-
   if type(limit == "boolean") and limit == true then
     limit = opts.auto_follow_limit
   end
 
-  if limit and math.abs(items[i].lnum - line) > limit then
-    return
-  end
+  -- if limit and math.abs(items[i].lnum - line) > limit then
+  --   return
+  -- end
 
   -- Clear echo area
   clear_prompt()
@@ -554,18 +560,17 @@ function qf.above(list, wrap, verbose)
 
   list = fix_list(list)
 
-  local items = valid_list_items(list)
-
-  if not check_empty(list, #items, verbose) then
-    return
-  end
-
   local bufnr = fn.bufnr("%")
   local pos = fn.getpos(".")
   local line = pos[2]
   local col = pos[3]
 
-  local idx = follow_prev(items, bufnr, line, col)
+  local idx = follow_prev(list, bufnr, line, col)
+
+  if not idx then
+    check_empty(list, 0, verbose)
+    return
+  end
 
   if list == "c" then
     cmd("cc " .. idx)
@@ -583,18 +588,17 @@ function qf.below(list, wrap, verbose)
   end
   list = fix_list(list)
 
-  local items = valid_list_items(list)
-
-  if not check_empty(list, #items, verbose) then
-    return
-  end
-
   local bufnr = fn.bufnr("%")
   local pos = fn.getpos(".")
   local line = pos[2]
   local col = pos[3]
 
-  local idx = follow_next(items, bufnr, line, col)
+  local idx = follow_next(list, bufnr, line, col)
+
+  if not idx then
+    check_empty(list, 0, verbose)
+    return
+  end
 
   if list == "c" then
     cmd("cc " .. idx)

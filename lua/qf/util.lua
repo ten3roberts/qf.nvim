@@ -72,6 +72,41 @@ function M.list_items(list, all)
   end
 end
 
+local cache = {}
+function M.sorted_list_items(list)
+  local res = M.get_list(list, { items = 1, changedtick = 1 })
+  local cached = cache[list]
+  if cached and cached.changedtick == res.changedtick then
+    print("Found cached sorted list")
+    return cached.items
+  end
+
+  local t = {}
+
+  for i, v in ipairs(res.items) do
+    if is_valid(v) then
+      v.idx = i
+      t[#t + 1] = v
+    end
+  end
+
+  table.sort(t, function(a, b)
+    if a.bufnr == b.bufnr then
+      if a.lnum == b.lnum then
+        return a.col < b.col
+      else
+        return a.lnum < b.lnum
+      end
+    else
+      return true
+    end
+  end)
+
+  cache[list] = { items = t, changedtick = res.changedtick }
+
+  return t
+end
+
 function M.valid_list_items(list)
   local items = M.get_list(list).items
   local t = {}
