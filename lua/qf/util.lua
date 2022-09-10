@@ -77,7 +77,6 @@ function M.sorted_list_items(list)
   local res = M.get_list(list, { items = 1, changedtick = 1 })
   local cached = cache[list]
   if cached and cached.changedtick == res.changedtick then
-    print("Found cached sorted list")
     return cached.items
   end
 
@@ -91,15 +90,15 @@ function M.sorted_list_items(list)
   end
 
   table.sort(t, function(a, b)
-    if a.bufnr == b.bufnr then
-      if a.lnum == b.lnum then
-        return a.col < b.col
-      else
-        return a.lnum < b.lnum
-      end
-    else
-      return true
+    if a.bufnr ~= b.bufnr then
+      return a.bufnr < b.bufnr
     end
+
+    if a.lnum ~= b.lnum then
+      return a.lnum < b.lnum
+    end
+
+    return (a.col or 0) < (b.col or 0)
   end)
 
   cache[list] = { items = t, changedtick = res.changedtick }
