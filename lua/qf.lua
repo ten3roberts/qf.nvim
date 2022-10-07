@@ -326,7 +326,7 @@ end
 --- Toggle `list`
 --- If stay == true, the list will not be focused
 ---@param list string
----@param stay boolean Do not focus the opened list
+---@param stay boolean|nil Do not focus the opened list
 ---@tag qf.toggle() QToggle LToggle
 function qf.toggle(list, stay)
   list = fix_list(list)
@@ -369,89 +369,89 @@ end
 local is_valid = util.is_valid
 
 -- Returns the list entry currently previous to the cursor
-local function follow_prev(list, bufnr, line, col)
+---@param list string
+---@param include_current boolean
+---@return Entry|nil
+local function follow_prev(list, include_current)
+  local pos = util.get_pos()
   local items = util.sorted_list_items(list)
   if #items == 0 then
     return nil
   end
-  local found_buf = false
+
+  local compare_pos = util.compare_pos
+
   for i = 1, #items do
     local j = #items - i + 1
     local item = items[j]
+    local ord = compare_pos(item, pos)
 
     -- We overshot the current buffer
-    if found_buf or item.bufnr == bufnr then
-      found_buf = true
-      -- If the current entry is past cursor, of the entry of the cursor has been
-      -- passed
-      item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
-      if
-        item.bufnr ~= bufnr
-        or item.lnum < line
-        or (item.lnum == line and (item.col > 0 and col and item.col < col))
-      then
-        return item.idx
-      end
+    -- if found_buf or item.bufnr == bufnr then
+    --   found_buf = true
+    -- If the current entry is past cursor, of the entry of the cursor has been
+    -- passed
+    item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
+    if ord == -1 or (include_current and ord == 0) then
+      return item
     end
   end
 
-  print(vim.inspect(items))
-  return items[#items].idx or 1
+  return nil
 end
 
 -- Returns the first entry after the cursor in buf or the first entry in the
 -- buffer
-local function follow_next(list, bufnr, line, col)
+---@param list string
+---@param include_current boolean
+---@return Entry|nil
+local function follow_next(list, include_current)
+  local pos = util.get_pos()
   local items = util.sorted_list_items(list)
   if #items == 0 then
     return nil
   end
 
-  local found_buf = false
+  local compare_pos = util.compare_pos
   for _, item in ipairs(items) do
+    local ord = compare_pos(item, pos)
     -- We overshot the current buffer
-    if found_buf or item.bufnr == bufnr then
-      found_buf = true
-      -- If the current entry is past cursor, of the entry of the cursor has been
-      -- passed
-      item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
-      if
-        item.bufnr ~= bufnr
-        or item.lnum > line
-        or (item.lnum == line and (item.col > 0 and col and item.col > col))
-      then
-        return item.idx
-      end
+    -- If the current entry is past cursor, of the entry of the cursor has been
+    -- passed
+    item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
+    if ord == 1 or (include_current and ord == 0) then
+      return item
     end
   end
 
-  return items[1].idx or 1
+  return nil
 end
 
 -- Returns the list entry closest to the cursor vertically
-local function follow_nearest(list, bufnr, line, col)
+--- Follows the closest entry
+---@return Entry|nil
+local function follow_nearest(list)
   local items = util.sorted_list_items(list)
   if #items == 0 then
     return nil
   end
+  local pos = util.get_pos()
   local i = 1
   local min = nil
-  local min_i = nil
+  local min_item = nil
 
   for _, item in ipairs(items) do
-    if is_valid(item) then
-      local dist = math.abs((item.lnum == line and col and item.col - col) or item.lnum - line)
+    local dist = math.abs((item.lnum == pos.lnum and pos.col and item.col - pos.col) or item.lnum - pos.lnum)
 
-      if min == nil or dist < min and item.bufnr == bufnr then
-        min = dist
-        min_i = i
-      end
+    if min == nil or dist < min and item.bufnr == pos.bufnr then
+      min_item = item
+      min = dist
     end
 
     i = i + 1
   end
 
-  return min_i
+  return min_item
 end
 
 local strategy_lookup = {
@@ -473,10 +473,8 @@ function qf.follow(list, strategy, limit)
   list = fix_list(list)
   local opts = qf.config[list]
 
-  local bufnr = fn.bufnr("%")
   local pos = fn.getpos(".")
   local line = pos[2]
-  local col = pos[3]
 
   -- Cursor hasn't moved to a new line since last call
   if opts and opts.last_line and opts.last_line == line then
@@ -491,11 +489,12 @@ function qf.follow(list, strategy, limit)
     return
   end
 
-  local i = strategy_func(list, bufnr, line, col)
+  local item = strategy_func(list, true)
 
-  if not i then
+  if not item then
     return
   end
+
   if type(limit == "boolean") and limit == true then
     limit = opts.auto_follow_limit
   end
@@ -505,9 +504,9 @@ function qf.follow(list, strategy, limit)
   -- end
 
   -- Clear echo area
-  clear_prompt()
+  -- clear_prompt()
   -- Select found entry
-  set_entry(list, i)
+  set_entry(list, item.idx)
 end
 
 --- Wrapping version of [lc]next. Also takes into account valid entries.
@@ -560,22 +559,17 @@ function qf.above(list, wrap, verbose)
 
   list = fix_list(list)
 
-  local bufnr = fn.bufnr("%")
-  local pos = fn.getpos(".")
-  local line = pos[2]
-  local col = pos[3]
+  local item = follow_prev(list, false)
 
-  local idx = follow_prev(list, bufnr, line, col)
-
-  if not idx then
+  if not item then
     check_empty(list, 0, verbose)
     return
   end
 
   if list == "c" then
-    cmd("cc " .. idx)
+    cmd("cc " .. item.idx)
   else
-    cmd("ll " .. idx)
+    cmd("ll " .. item.idx)
   end
 end
 
@@ -588,22 +582,17 @@ function qf.below(list, wrap, verbose)
   end
   list = fix_list(list)
 
-  local bufnr = fn.bufnr("%")
-  local pos = fn.getpos(".")
-  local line = pos[2]
-  local col = pos[3]
+  local item = follow_next(list, false)
 
-  local idx = follow_next(list, bufnr, line, col)
-
-  if not idx then
+  if not item then
     check_empty(list, 0, verbose)
     return
   end
 
   if list == "c" then
-    cmd("cc " .. idx)
+    cmd("cc " .. item.idx)
   else
-    cmd("ll " .. idx)
+    cmd("ll " .. item.idx)
   end
 end
 
