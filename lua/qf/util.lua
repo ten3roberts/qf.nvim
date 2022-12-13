@@ -37,13 +37,34 @@ function M.set_list(list, items, mode, opts)
   end
 end
 
+---@class QfList
+---@field items Entry[]
+---@field changedtick number
+---@field size number
+---@field title string
+
+---@class Entry: Position
+---@field text string
+---@field idx number
+---@field type string
+
+---@return QfList
 function M.get_list(list, what, winid)
+  local res
   what = what or { items = 1 }
   if list == "c" then
-    return fn.getqflist(what)
+    res = fn.getqflist(what)
   else
-    return fn.getloclist(winid or ".", what)
+    res = fn.getloclist(winid or ".", what)
   end
+
+  if res.items then
+    for i, v in ipairs(res.items) do
+      v.idx = i
+    end
+  end
+
+  return res
 end
 
 function M.get_list_win(list)
@@ -72,7 +93,10 @@ function M.list_items(list, all)
   end
 end
 
+---@type QfList
 local cache = {}
+
+---@return Entry[]
 function M.sorted_list_items(list)
   local res = M.get_list(list, { items = 1, changedtick = 1 })
   local cached = cache[list]
@@ -120,6 +144,7 @@ function M.valid_list_items(list)
   return t
 end
 
+---@return number
 function M.get_height(list, config)
   local opts = config[list]
 
@@ -161,6 +186,52 @@ function M.tally(list)
   end
 
   return { error, warn, information, hint, text }
+end
+
+---@class Position
+---@field bufnr number
+---@field lnum number
+---@field col number
+
+---@param a Position
+---@param b Position
+---@return number
+function M.compare_pos(a, b)
+  if a.bufnr < b.bufnr then
+    return -1
+  end
+  if a.bufnr > b.bufnr then
+    return 1
+  end
+
+  if a.lnum < b.lnum then
+    return -1
+  end
+  if a.lnum > b.lnum then
+    return 1
+  end
+
+  if a.col < b.col then
+    return -1
+  end
+  if a.col > b.col then
+    return 1
+  end
+
+  return 0
+end
+
+--- Returns the cursor position
+---@return Position
+function M.get_pos()
+  local bufnr = fn.bufnr("%")
+  local pos = fn.getpos(".")
+
+  return {
+    bufnr = bufnr,
+    lnum = pos[2],
+    col = pos[3],
+  }
 end
 
 return M
