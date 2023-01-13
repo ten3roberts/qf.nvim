@@ -116,15 +116,15 @@ function qf.setup(config)
   qf.config = vim.tbl_deep_extend("force", defaults, config or {})
   qf.saved = {}
 
+  qf.setup_syntax = function() end
   if qf.config.pretty then
     local fmt = require("qf.format")
     vim.opt.quickfixtextfunc = "QfFormat"
     qf.setup_syntax = function()
       vim.cmd(fmt.setup_syntax())
     end
-  else
-    qf.setup_syntax = function() end
   end
+
   qf.setup_autocmds(qf.config)
 end
 
@@ -164,17 +164,17 @@ function qf.reopen(list)
 
   print("Reopening window: " .. list)
 
-  api.nvim_exec(
-    string.format(
-      [[
-  noau %sclose
-  ]],
-      list,
-      list,
-      get_height(list, qf.config)
-    ),
-    false
-  )
+  -- api.nvim_exec(
+  --   string.format(
+  --     [[
+  -- noau %sclose
+  -- ]],
+  --     list,
+  --     list,
+  --     get_height(list, qf.config)
+  --   ),
+  --   false
+  -- )
 
   -- api.nvim_set_current_win(new)
 
@@ -380,6 +380,7 @@ local function follow_prev(list, include_current)
   end
 
   local compare_pos = util.compare_pos
+  local found_buf = false
 
   for i = 1, #items do
     local j = #items - i + 1
@@ -387,12 +388,13 @@ local function follow_prev(list, include_current)
     local ord = compare_pos(item, pos)
 
     -- We overshot the current buffer
-    -- if found_buf or item.bufnr == bufnr then
-    --   found_buf = true
+    if item.bufnr == pos.bufnr then
+      found_buf = true
+    end
     -- If the current entry is past cursor, of the entry of the cursor has been
     -- passed
     item.col = math.min(item.col, linelen(item.bufnr, item.lnum))
-    if ord == -1 or (include_current and ord == 0) then
+    if found_buf and (ord == -1 or (include_current and ord == 0)) then
       return item
     end
   end
@@ -836,9 +838,17 @@ function qf.setup_autocmds(config)
   local open = qf.open
   local close = qf.close
 
-  au("WinClosed", function()
-    if vim.o.ft ~= "ft" then
-      vim.cmd("lclose")
+  au("WinClosed", function(o)
+    local winid = tonumber(o.file)
+    local wininfo = fn.getwininfo(winid)[1]
+
+    if wininfo.loclist == 1 or wininfo.quickfix == 1 then
+      return
+    end
+
+    local loc_win = util.location_list(winid)
+    if loc_win ~= nil then
+      api.nvim_win_close(loc_win, true)
     end
   end)
 
@@ -850,10 +860,20 @@ function qf.setup_autocmds(config)
     end
 
     if list.unfocus_close then
-      au("WinLeave", function()
-        vim.defer_fn(function()
-          close(k)
-        end, 50)
+      au("WinLeave", function(o)
+        vim.schedule(function()
+          local winid = tonumber(o.file)
+          local wininfo = fn.getwininfo(winid)[1]
+
+          if wininfo.loclist == 1 or wininfo.quickfix == 1 then
+            return
+          end
+
+          local loc_win = util.location_list(winid)
+          if loc_win ~= nil then
+            api.nvim_win_close(loc_win, true)
+          end
+        end)
       end)
     end
 

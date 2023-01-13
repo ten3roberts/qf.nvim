@@ -67,6 +67,17 @@ function M.get_list(list, what, winid)
   return res
 end
 
+--- Returns the window id of the location list if it exists for a window
+function M.location_list(winid)
+  local t = fn.getloclist(winid, { winid = 1 })
+
+  if t.winid ~= 0 then
+    return t.winid
+  else
+    return nil
+  end
+end
+
 function M.get_list_win(list)
   list = M.fix_list(list)
   local tabnr = fn.tabpagenr()
