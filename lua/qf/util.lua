@@ -12,7 +12,8 @@ function M.fix_list(list)
   end
 
   if list == "visible" then
-    if M.get_list_win("l") ~= 0 then
+    local win = M.get_list_win("l")
+    if win ~= 0 then
       return "l"
     else
       return "c"
@@ -91,7 +92,7 @@ function M.get_list_win(list)
       return 0
     end
   else
-    return vim.fn.getloclist(0, { winid = 0 })["winid"] or 0
+    return vim.fn.getloclist(0, { winid = 1 }).winid or 0
   end
 end
 
