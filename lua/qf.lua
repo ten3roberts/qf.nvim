@@ -116,13 +116,14 @@ function qf.setup(config)
   qf.config = vim.tbl_deep_extend("force", defaults, config or {})
   qf.saved = {}
 
-  qf.setup_syntax = function() end
   if qf.config.pretty then
     local fmt = require("qf.format")
     vim.opt.quickfixtextfunc = "QfFormat"
     qf.setup_syntax = function()
       vim.cmd(fmt.setup_syntax())
     end
+  else
+    qf.setup_syntax = function() end
   end
 
   qf.setup_autocmds(qf.config)
@@ -782,11 +783,25 @@ end
 
 ---Filter and keep items in a list based on `filter`
 ---@param list string
----@param filter function
+---@param filter fun(Entry): boolean
+---@param multiline_msg boolean keep multiline messages spanning many items
 ---@tag qf.keep() VkeepText QkeepText LkeepText VkeepType QkeepType LkeepType
-function qf.filter(list, filter)
+function qf.filter(list, filter, multiline_msg)
   list = fix_list(list)
-  local items = vim.tbl_filter(filter, list_items(list))
+
+  local items = {}
+
+  local extend = false
+  for _, item in ipairs(list_items(list, true)) do
+    if multiline_msg ~= false and item.type == "" and extend then
+      table.insert(items, item)
+    elseif filter(item) then
+      extend = true
+      table.insert(items, item)
+    else
+      extend = false
+    end
+  end
 
   qf.set(list, { items = items, open = true, tally = true })
 end
