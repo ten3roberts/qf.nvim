@@ -856,7 +856,8 @@ function qf.setup_autocmds(config)
   au("WinClosed", function(o)
     local winid = tonumber(o.file)
     local wininfo = fn.getwininfo(winid)[1]
-    if wininfo == nil or wininfo == nilwininfo.loclist == 1 or wininfo.quickfix == 1 then
+    if wininfo == nil then return end
+    if wininfo.loclist == 1 or wininfo.quickfix == 1 then
       return
     end
 
