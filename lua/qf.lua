@@ -129,21 +129,21 @@ function qf.setup(config)
   qf.setup_autocmds(qf.config)
 end
 
-local function printv(msg, verbose)
+local function message_verbose(verbose, msg, level)
   if istrue(verbose) ~= false then
-    print(msg)
+    vim.notify(msg, level)
   end
 end
 
 local function check_empty(list, num_items, verbose)
   if num_items == 0 then
     if list == "c" then
-      printv("Quickfix list empty", verbose)
-      return false
+      message_verbose(verbose, "Quickfix list empty", vim.log.levels.ERROR)
     else
-      printv("Location list empty", verbose)
-      return false
+      message_verbose(verbose, "Location list empty", vim.log.levels.ERROR)
     end
+
+    return false
   end
   return true
 end
@@ -282,10 +282,7 @@ function qf.open(list, stay, silent, weak)
   end
 
   -- Auto close
-  if num_items == 0 then
-    if silent ~= true then
-      vim.notify("No items", vim.log.levels.ERROR)
-    end
+  if not check_empty(list, num_items, not silent) then
     if opts and opts.auto_close then
       cmd(list .. "close")
       return
@@ -364,6 +361,9 @@ local function clear_prompt()
 end
 
 local function linelen(bufnr, lnum)
+  if not api.nvim_buf_is_valid(bufnr) then
+    return 0
+  end
   return #(api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, false)[1] or "")
 end
 
@@ -512,6 +512,14 @@ function qf.follow(list, strategy, limit)
   set_entry(list, item.idx)
 end
 
+local function goto_entry(list, index)
+  if list == "c" then
+    cmd("cc " .. index)
+  else
+    cmd("ll " .. index)
+  end
+end
+
 --- Wrapping version of [lc]next. Also takes into account valid entries.
 --- If wrap is nil or true, it will wrap around the list
 ---@tag qf.next() Qnext Lnext
@@ -521,14 +529,24 @@ function qf.next(list, wrap, verbose)
   end
   list = fix_list(list)
 
-  if not check_empty(list, #list_items(list), verbose) then
-    return
+  local info = get_list(list, { items = 1, idx = 0 })
+
+  --- Find next valid
+  for i = info.idx + 1, #info.items do
+    local item = info.items[i]
+    if is_valid(item) then
+      goto_entry(list, i)
+      return
+    end
   end
 
   if wrap then
-    cmd("try | :" .. list .. "next | catch | " .. list .. "first | endtry")
-  else
-    cmd("try | :" .. list .. "next | catch | call vim.notify('No More Items', vim.log.levels.ERROR) | endtry")
+    local items = vim.tbl_filter(is_valid, info.items)
+    local first = items[1]
+
+    if first then
+      goto_entry(list, first.idx)
+    end
   end
 end
 
@@ -541,14 +559,26 @@ function qf.prev(list, wrap, verbose)
   end
   list = fix_list(list)
 
-  if not check_empty(list, #list_items(list), verbose) then
-    return
+  local info = get_list(list, { items = 1, idx = 0 })
+
+  --- Find prev valid
+  for i = #info.items - info.idx + 2, #info.items do
+    local j = #info.items - i + 1
+
+    local item = info.items[j]
+    if is_valid(item) then
+      goto_entry(list, j)
+      return
+    end
   end
 
   if wrap then
-    cmd("try | :" .. list .. "prev | catch | " .. list .. "last | endtry")
-  else
-    cmd("try | :" .. list .. "prev | catch | call vim.notify('No More Items', vim.log.levels.ERROR) | endtry")
+    local items = vim.tbl_filter(is_valid, info.items)
+    local last = items[#items]
+
+    if last then
+      goto_entry(list, last.idx)
+    end
   end
 end
 
@@ -569,11 +599,7 @@ function qf.above(list, wrap, verbose)
     return
   end
 
-  if list == "c" then
-    cmd("cc " .. item.idx)
-  else
-    cmd("ll " .. item.idx)
-  end
+  goto_entry(list, item.idx)
 end
 
 --- Wrapping version of [lc]below
