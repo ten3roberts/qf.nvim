@@ -42,6 +42,7 @@ end
 ---@field items Entry[]
 ---@field changedtick number
 ---@field size number
+---@field idx number
 ---@field title string
 
 ---@class Entry: Position
