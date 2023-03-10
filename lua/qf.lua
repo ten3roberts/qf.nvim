@@ -520,6 +520,46 @@ local function goto_entry(list, index)
   end
 end
 
+---comment
+---@param items Entry[]
+---@param start number
+---@param direction number
+---@param func fun(item: Entry): boolean
+---@param wrap boolean
+---@return Entry|nil
+local function seek_entry(items, start, direction, func, wrap)
+  --- Find next valid
+  if direction == 1 then
+    for i = start, #items do
+      local item = items[i]
+      if func(item) then
+        return item
+      end
+    end
+
+    local items = vim.tbl_filter(func, items)
+    local first = items[1]
+
+    return first
+  else
+    for i = #items - start + 1, #items do
+      local j = #items - i + 1
+
+      local item = items[j]
+      if func(item) then
+        return item
+      end
+    end
+
+    if wrap then
+      local items = vim.tbl_filter(func, items)
+      local last = items[#items]
+
+      return last
+    end
+  end
+end
+
 --- Wrapping version of [lc]next. Also takes into account valid entries.
 --- If wrap is nil or true, it will wrap around the list
 ---@tag qf.next() Qnext Lnext
@@ -531,22 +571,9 @@ function qf.next(list, wrap, verbose)
 
   local info = get_list(list, { items = 1, idx = 0 })
 
-  --- Find next valid
-  for i = info.idx + 1, #info.items do
-    local item = info.items[i]
-    if is_valid(item) then
-      goto_entry(list, i)
-      return
-    end
-  end
-
-  if wrap then
-    local items = vim.tbl_filter(is_valid, info.items)
-    local first = items[1]
-
-    if first then
-      goto_entry(list, first.idx)
-    end
+  local item = seek_entry(info.items, info.idx + 1, 1, is_valid, wrap)
+  if item then
+    goto_entry(list, item.idx)
   end
 end
 
@@ -561,24 +588,10 @@ function qf.prev(list, wrap, verbose)
 
   local info = get_list(list, { items = 1, idx = 0 })
 
-  --- Find prev valid
-  for i = #info.items - info.idx + 2, #info.items do
-    local j = #info.items - i + 1
+  local item = seek_entry(info.items, info.idx - 1, -1, is_valid, wrap)
 
-    local item = info.items[j]
-    if is_valid(item) then
-      goto_entry(list, j)
-      return
-    end
-  end
-
-  if wrap then
-    local items = vim.tbl_filter(is_valid, info.items)
-    local last = items[#items]
-
-    if last then
-      goto_entry(list, last.idx)
-    end
+  if item then
+    goto_entry(list, item.idx)
   end
 end
 
@@ -882,7 +895,9 @@ function qf.setup_autocmds(config)
   au("WinClosed", function(o)
     local winid = tonumber(o.file)
     local wininfo = fn.getwininfo(winid)[1]
-    if wininfo == nil then return end
+    if wininfo == nil then
+      return
+    end
     if wininfo.loclist == 1 or wininfo.quickfix == 1 then
       return
     end
