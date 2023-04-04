@@ -91,7 +91,7 @@ local post_commands = {
 local function list_post_commands(l)
   if l == "l" then
     return vim.tbl_map(
-      -- Remove prefix c and prepend l
+    -- Remove prefix c and prepend l
       function(val)
         if val:sub(1, 1) == "c" then
           return "l" .. val:sub(2)
@@ -123,7 +123,8 @@ function qf.setup(config)
       vim.cmd(fmt.setup_syntax())
     end
   else
-    qf.setup_syntax = function() end
+    qf.setup_syntax = function()
+    end
   end
 
   qf.setup_autocmds(qf.config)
@@ -372,7 +373,7 @@ local is_valid = util.is_valid
 -- Returns the list entry currently previous to the cursor
 ---@param list string
 ---@param include_current boolean
----@return Entry|nil
+---@return Item|nil
 local function follow_prev(list, include_current)
   local pos = util.get_pos()
   local items = util.sorted_list_items(list)
@@ -407,7 +408,7 @@ end
 -- buffer
 ---@param list string
 ---@param include_current boolean
----@return Entry|nil
+---@return Item|nil
 local function follow_next(list, include_current)
   local pos = util.get_pos()
   local items = util.sorted_list_items(list)
@@ -432,7 +433,7 @@ end
 
 -- Returns the list entry closest to the cursor vertically
 --- Follows the closest entry
----@return Entry|nil
+---@return Item|nil
 local function follow_nearest(list)
   local items = util.sorted_list_items(list)
   if #items == 0 then
@@ -521,12 +522,12 @@ local function goto_entry(list, index)
 end
 
 ---comment
----@param items Entry[]
+---@param items Item[]
 ---@param start number
 ---@param direction number
----@param func fun(item: Entry): boolean
+---@param func fun(item: Item): boolean
 ---@param wrap boolean
----@return Entry|nil
+---@return Item|nil
 local function seek_entry(items, start, direction, func, wrap)
   --- Find next valid
   if direction == 1 then
@@ -638,63 +639,26 @@ function qf.below(list, wrap, verbose)
   end
 end
 
---- Save quickfix or location list with name
-function qf.save(list, name)
-  list = fix_list(list)
-
-  qf.saved[name] = list_items(list)
+---@param list string
+---@param key string|nil
+function qf.save(list, key)
+  require("qf.history").save(list, key)
 end
 
-local function prompt_name()
-  local t = {}
-  for k, _ in pairs(qf.saved) do
-    t[#t + 1] = k
-  end
-
-  if #t == 0 then
-    vim.notify("No saved lists", vim.log.levels.ERROR)
-  end
-
-  local choice = fn.confirm("Choose saved list", table.concat(t, "\n"))
-  if choice == nil then
-    return nil
-  end
-
-  return t[choice]
-end
-
---- Loads a saved list into the location or quickfix list
+--- Restores a saved list into the location or quickfix list
 --- If name is not given, user will be prompted with all saved lists.
-function qf.load(list, name)
-  list = fix_list(list)
-
-  if name == nil then
-    name = prompt_name()
-  end
-
-  if name == nil then
-    return
-  end
-
-  local items = qf.saved[name]
-
-  if items == nil then
-    vim.notify("No list saved with name: " .. name, vim.log.levels.ERROR)
-    return
-  end
-
-  if list == "c" then
-    fn.setqflist(items)
+---@param list string
+---@param key string|nil
+---@param opts SetOpts|nil
+function qf.load(list, key, opts)
+  if key then
+    require("qf.history").restore(list, key, opts)
   else
-    fn.setloclist(".", items)
-  end
-
-  if qf.config[list].auto_open then
-    qf.open(list, true)
+    require("qf.history").pick(list, opts)
   end
 end
 
----@class set_opts
+---@class SetOpts
 ---@field items table
 ---@field lines table
 ---@field cwd string
@@ -703,14 +667,19 @@ end
 ---@field title string|nil
 ---@field tally boolean|nil
 ---@field open boolean|nil if not specified, open if there are errors
+---@field save boolean|nil saves the previous list
 
 --- Set location or quickfix list items
 --- If a compiler is given, the items will be parsed from it
 --- Invalidates follow cache
 ---@param list string
----@param opts set_opts
+---@param opts SetOpts
 function qf.set(list, opts)
   list = fix_list(list)
+
+  if opts.save then
+    qf.save(list, nil)
+  end
 
   local old_c = vim.b.current_compiler
 
@@ -752,10 +721,6 @@ function qf.set(list, opts)
     vim.cmd("compiler " .. old_c)
   end
 
-  local tally = util.tally(list)
-  if opts.tally then
-    qf.tally(list, opts.title or "", tally)
-  end
 
   qf.config[list].last_line = nil
 
@@ -763,52 +728,62 @@ function qf.set(list, opts)
     api.nvim_set_current_dir(old_cwd)
   end
 
-  if opts.open == true or (opts.open == nil and tally[1] > 0) then
+  if opts.open == true or (opts.open == nil and util.tally(util.get_list(list)).error > 0) then
     qf.open(list, true, true)
   end
 end
 
---- Suffix the chosen list with a summary of the classified number of entries
+---@class QfInfo
+---@field title string
+---@field tally_str string
+---@field tally Tally
+---@field list_kind string
+---@field size integer
+---@field idx integer
+
 ---@param list string
----@param title string|nil
----@param tally integer[]|nil
-function qf.tally(list, title, tally)
+---@return QfInfo
+function qf.get_info(list, winid)
   list = fix_list(list)
 
-  local info = get_list(list, { title = 1, id = 0 })
+  local info = get_list(list, { items = 1, title = 1, id = 0 }, winid)
 
-  if title == nil then
-    title = info.title
-  end
+  local title = info.title
 
-  tally = tally or util.tally(list)
+  local tally = util.tally(info.items)
 
-  local d = require("qf").config.signs
-  d = {
-    d.E,
-    d.W,
-    d.I,
-    d.N,
-    d.T,
+  local tally_str = util.tally_str(tally, true)
+  return {
+    title = title, tally = tally, tally_str = tally_str,
   }
+end
 
-  local total_count = 0
-  local t = {}
-  for i, v in ipairs(tally) do
-    if v > 0 then
-      total_count = total_count + 1
-      local severity = d[i]
-      t[#t + 1] = "%#" .. severity.hl .. "#" .. severity.sign .. " " .. v
-    end
+---@return QfInfo|nil
+function qf.inspect_win(winid)
+  local info = fn.getwininfo(winid)[1]
+
+
+  local title = info.variables.quickfix_title
+  local list
+  local what = { all = 1 }
+  if info.loclist == 1 then
+    list = util.get_list("l", what, winid)
+  elseif info.quickfix == 1 then
+    list = util.get_list("c", what, winid)
+  else
+    return nil
   end
 
-  local tally_str = " - " .. table.concat(t, " ") .. "%#Normal#"
+  local tally = util.tally(list.items)
 
-  if total_count > 0 then
-    local s = title:match("[^%-]*%s?") .. tally_str
-
-    set_list(list, {}, "r", { title = s })
-  end
+  local tally_str = util.tally_str(tally, true)
+  return {
+    title = title,
+    tally = tally,
+    tally_str = tally_str,
+    size = list.size,
+    idx = list.idx
+  }
 end
 
 function qf.filter_text(list, pat)
