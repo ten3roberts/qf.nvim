@@ -212,15 +212,15 @@ end
 function M.tally_str(tally, highlight)
     local d = require("qf").config.signs
     d = {
-        error = d.E,
-        warn = d.W,
-        info = d.I,
-        hint = d.N,
-        text = d.T,
+        d.E,
+        d.W,
+        d.I,
+        d.N,
+        d.T,
     }
 
     local t = {}
-    for i, v in pairs(tally) do
+    for i, v in ipairs({ tally.error, tally.warn, tally.info, tally.hint, tally.text }) do
         if v > 0 then
             local severity = d[i]
             if highlight then
