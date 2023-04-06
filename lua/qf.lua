@@ -48,19 +48,18 @@ local list_defaults = {
 ---@field l List
 ---@field close_other boolean Close other list kind on open. If location list opens, qf closes, and vice-versa..
 ---@field pretty boolean Use a pretty printed format function for the quickfix lists.
----@field signs table Customize signs using { hl, sign }
 local defaults = {
   c = list_defaults,
   l = list_defaults,
   close_other = true,
   pretty = true,
-  signs = {
-    E = { hl = "DiagnosticSignError", sign = "" },
-    W = { hl = "DiagnosticSignWarn", sign = "" },
-    I = { hl = "DiagnosticSignInfo", sign = "" },
-    N = { hl = "DiagnosticSignHint", sign = "" },
-    T = { hl = "DiagnosticSignHint", sign = "" },
-  },
+  -- signs = {
+  --   E = { hl = "DiagnosticSignError", sign = "" },
+  --   W = { hl = "DiagnosticSignWarn", sign = "" },
+  --   I = { hl = "DiagnosticSignInfo", sign = "" },
+  --   N = { hl = "DiagnosticSignHint", sign = "" },
+  --   T = { hl = "DiagnosticSignHint", sign = "" },
+  -- },
 }
 
 local qf = { config = defaults }
@@ -91,7 +90,7 @@ local post_commands = {
 local function list_post_commands(l)
   if l == "l" then
     return vim.tbl_map(
-    -- Remove prefix c and prepend l
+      -- Remove prefix c and prepend l
       function(val)
         if val:sub(1, 1) == "c" then
           return "l" .. val:sub(2)
@@ -123,8 +122,7 @@ function qf.setup(config)
       vim.cmd(fmt.setup_syntax())
     end
   else
-    qf.setup_syntax = function()
-    end
+    qf.setup_syntax = function() end
   end
 
   qf.setup_autocmds(qf.config)
@@ -721,7 +719,6 @@ function qf.set(list, opts)
     vim.cmd("compiler " .. old_c)
   end
 
-
   qf.config[list].last_line = nil
 
   if opts.cwd then
@@ -754,14 +751,15 @@ function qf.get_info(list, winid)
 
   local tally_str = util.tally_str(tally, true)
   return {
-    title = title, tally = tally, tally_str = tally_str,
+    title = title,
+    tally = tally,
+    tally_str = tally_str,
   }
 end
 
 ---@return QfInfo|nil
 function qf.inspect_win(winid)
   local info = fn.getwininfo(winid)[1]
-
 
   local title = info.variables.quickfix_title
   local list
@@ -782,7 +780,7 @@ function qf.inspect_win(winid)
     tally = tally,
     tally_str = tally_str,
     size = list.size,
-    idx = list.idx
+    idx = list.idx,
   }
 end
 
