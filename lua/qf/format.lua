@@ -28,11 +28,9 @@ function M.setup_syntax()
     hi link QfPath     Directory
   ]]
 
-  local config = require("qf").config
   local d = util.get_signs()
   local sum = d.E.text .. d.W.text .. d.I.text .. d.N.text .. d.T.text .. " "
   syntax_cache = string.format(template, d.E.text, d.W.text, d.I.text, d.N.text, d.T.text, sum)
-  print("Syntax cache: " .. vim.inspect(syntax_cache))
   return syntax_cache
 end
 
