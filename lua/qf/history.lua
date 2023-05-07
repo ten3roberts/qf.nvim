@@ -20,8 +20,7 @@ function M.remove(key)
 end
 
 function M.remove_index(index)
-  local item = table.remove(history, index)
-  print("Removing item: " .. vim.inspect(item))
+  table.remove(history, index)
   for k, i in pairs(indices) do
     if i > index then
       print(string.format("Updating index for %s:%d", k, i))
@@ -35,7 +34,6 @@ end
 function M.insert(key, item)
   M.remove(key)
 
-  print("Inserting history item: " .. vim.inspect(item.key))
   table.insert(history, item)
   local index = #history
   indices[key] = index
