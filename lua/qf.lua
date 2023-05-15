@@ -48,12 +48,14 @@ local list_defaults = {
 ---@field l List
 ---@field close_other boolean Close other list kind on open. If location list opens, qf closes, and vice-versa..
 ---@field pretty boolean Use a pretty printed format function for the quickfix lists.
+---@field silent boolean Suppress messages like "(1 of 3): *line content*" on jump
 ---@field signs table Customize signs using { hl, sign }
 local defaults = {
   c = list_defaults,
   l = list_defaults,
   close_other = true,
   pretty = true,
+  silent = false,
   signs = {
     E = { hl = "DiagnosticSignError", sign = "" },
     W = { hl = "DiagnosticSignWarn", sign = "" },
@@ -513,11 +515,10 @@ function qf.follow(list, strategy, limit)
 end
 
 local function goto_entry(list, index)
-  if list == "c" then
-    cmd("cc " .. index)
-  else
-    cmd("ll " .. index)
-  end
+  local silent = qf.config.silent and "silent" or ""
+  local command = list == "c" and "cc" or "ll"
+
+  cmd(string.format("%s %s %d", silent, command, index))
 end
 
 --- Wrapping version of [lc]next. Also takes into account valid entries.
@@ -618,11 +619,7 @@ function qf.below(list, wrap, verbose)
     return
   end
 
-  if list == "c" then
-    cmd("cc " .. item.idx)
-  else
-    cmd("ll " .. item.idx)
-  end
+  goto_entry(list, item.idx)
 end
 
 --- Save quickfix or location list with name

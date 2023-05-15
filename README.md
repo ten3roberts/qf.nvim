@@ -128,7 +128,8 @@ require 'qf'.setup {
         focus_open = false, -- Auto open list on window focus if it contains items
       }
       close_other = false, -- Close location list when quickfix list opens
-      pretty = true, -- "Pretty print quickfix lists"
+      pretty = true, -- Pretty print quickfix lists
+      silent = false, -- Suppress messages like "(1 of 3): *line content*" on jump
 }
 ```
 
