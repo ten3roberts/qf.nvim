@@ -189,10 +189,7 @@ function M.tally(items)
   local hint = 0
   local text = 0
 
-  local sevs = {}
-
   for _, v in ipairs(items) do
-    sevs[v.type] = (sevs[v.type] or 0) + 1
     if v.type == "E" then
       error = error + 1
     elseif v.type == "W" then
@@ -244,7 +241,7 @@ function M.tally_str(tally, highlight)
       if highlight then
         t[#t + 1] = "%#" .. severity.texthl .. "#" .. severity.text .. " " .. v
       else
-        t[#t + 1] = severity.sign .. " " .. v
+        t[#t + 1] = (severity.sign or "_") .. " " .. v
       end
     end
   end

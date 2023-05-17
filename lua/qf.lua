@@ -262,23 +262,12 @@ end
 --- If auto_close is true, the list will be closed if empty, similar to cwindow
 ---@param list string
 ---@param stay boolean|nil
----@param weak boolean|nil Only open if other list kind is not open
 ---@tag qf.open() Qopen Lopen
-function qf.open(list, stay, silent, weak)
+function qf.open(list, stay, silent)
   list = fix_list(list)
 
   local opts = qf.config[list]
   local num_items = get_list(list, { size = 1 }).size
-
-  local other
-  if list == "c" then
-    other = "l"
-  else
-    other = "c"
-  end
-  if weak == true and util.get_list_win(other) ~= 0 then
-    return
-  end
 
   -- Auto close
   if not check_empty(list, num_items, not silent) then
@@ -291,7 +280,12 @@ function qf.open(list, stay, silent, weak)
 
   if qf.config.close_other then
     if list == "c" then
-      cmd("lclose")
+      local wininfo = fn.getwininfo()
+      for _, win in ipairs(wininfo) do
+        if win.loclist == 1 then
+          api.nvim_win_close(win.winid, false)
+        end
+      end
     elseif list == "l" then
       cmd("cclose")
     end
@@ -625,6 +619,7 @@ function qf.below(list, wrap, verbose)
 
   local item = follow_next(list, false)
 
+  print("Item: " .. vim.inspect(item))
   if not item then
     check_empty(list, 0, verbose)
     return
@@ -664,7 +659,7 @@ end
 ---@field winid number|nil
 ---@field title string|nil
 ---@field tally boolean|nil
----@field open boolean|nil if not specified, open if there are errors
+---@field open boolean|string|nil if "auto", open if there are errors
 ---@field save boolean|nil saves the previous list
 
 --- Set location or quickfix list items
@@ -725,7 +720,10 @@ function qf.set(list, opts)
     api.nvim_set_current_dir(old_cwd)
   end
 
-  if opts.open == true or (opts.open == nil and util.tally(util.get_list(list)).error > 0) then
+  if
+    opts.open == true
+    or (opts.open == "auto" and util.tally(util.get_list(list, { items = 1 }, opts.winid).items).error > 0)
+  then
     qf.open(list, true, true)
   end
 end
