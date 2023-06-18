@@ -96,7 +96,8 @@ function M.restore(list, key, opts)
   end
 end
 
-function M.pick(list)
+---@param opts SetOpts|nil
+function M.pick(list, opts)
   list = util.fix_list(list)
   local list_name
   if list == "c" then
@@ -114,11 +115,14 @@ function M.pick(list)
     if not item then
       return
     end
-    require("qf").set(list, {
-      items = item.items,
-      title = item.title,
-      open = true,
-    })
+    require("qf").set(
+      list,
+      vim.tbl_extend("keep", {
+        items = item.items,
+        title = item.title,
+        open = true,
+      }, opts or {})
+    )
   end)
 end
 

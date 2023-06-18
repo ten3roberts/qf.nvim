@@ -618,7 +618,6 @@ function qf.below(list, wrap, verbose)
 
   local item = follow_next(list, false)
 
-  print("Item: " .. vim.inspect(item))
   if not item then
     check_empty(list, 0, verbose)
     return
