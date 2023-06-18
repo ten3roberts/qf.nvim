@@ -38,7 +38,6 @@ Fields~
 {l} List
 {close_other} `(boolean)` Close other list kind on open. If location list opens, qf closes, and vice-versa..
 {pretty} `(boolean)` Use a pretty printed format function for the quickfix lists.
-{signs} `(table)` Customize signs using { hl, sign }
 
 ------------------------------------------------------------------------------
                                                                     *qf.setup()*
@@ -66,20 +65,19 @@ Parameters~
 
 ------------------------------------------------------------------------------
                                                          *qf.open()* *Qopen* *Lopen*
-                  `qf.open`({list}, {stay}, {silent}, {weak})
+                      `qf.open`({list}, {stay}, {silent})
 Open the `quickfix` or `location` list
 If stay == true, the list will not be focused
 If auto_close is true, the list will be closed if empty, similar to cwindow
 Parameters~
 {list} `(string)`
-{stay} `(boolean)`
-{weak} `(boolean|nil)` Only open if other list kind is not open
+{stay} `(boolean|nil)`
 
 ------------------------------------------------------------------------------
                                                *qf.close()* *Qclose* *LClose* *VClose*
                                `qf.close`({list})
 Close `list`
-@param list List
+@param list string
 
 ------------------------------------------------------------------------------
                                                    *qf.toggle()* *QToggle* *LToggle*
@@ -87,16 +85,41 @@ Close `list`
 Toggle `list`
 If stay == true, the list will not be focused
 Parameters~
-{list} List
-{stay} `(boolean)` Do not focus the opened list
+{list} `(string)`
+{stay} `(boolean|nil)` Do not focus the opened list
 
 ------------------------------------------------------------------------------
                                                       *qf.clear()* *Qclear* *Lclear*
                            `qf.clear`({list}, {name})
 Clears the quickfix or current location list
 Parameters~
-{list} List
+{list} `(string)`
 {name} `(string|nil)` save the list before clearing under name
+
+------------------------------------------------------------------------------
+                                                                 *follow_prev()*
+                    `follow_prev`({list}, {include_current})
+Parameters~
+{list} `(string)`
+{include_current} `(boolean)`
+Return~
+`(Item|nil)`
+
+------------------------------------------------------------------------------
+                                                                 *follow_next()*
+                    `follow_next`({list}, {include_current})
+Parameters~
+{list} `(string)`
+{include_current} `(boolean)`
+Return~
+`(Item|nil)`
+
+------------------------------------------------------------------------------
+                                                              *follow_nearest()*
+                            `follow_nearest`({list})
+Follows the closest entry
+Return~
+`(Item|nil)`
 
 ------------------------------------------------------------------------------
                                                                    *qf.follow()*
@@ -107,6 +130,19 @@ strategy is one of the following:
 - 'nearest'
 Parameters~
 {limit} `(number|nil)` Don't select entry further away than limit.
+
+------------------------------------------------------------------------------
+                                                                  *seek_entry()*
+          `seek_entry`({items}, {start}, {direction}, {func}, {wrap})
+
+Parameters~
+{items} Item[]
+{start} `(number)`
+{direction} `(number)`
+{func} `(fun(item: Item): boolean)`
+{wrap} `(boolean)`
+Return~
+`(Item|nil)`
 
 ------------------------------------------------------------------------------
                                                          *qf.next()* *Qnext* *Lnext*
@@ -132,18 +168,24 @@ Will switch buffer
 
 ------------------------------------------------------------------------------
                                                                      *qf.save()*
-                           `qf.save`({list}, {name})
-Save quickfix or location list with name
+                            `qf.save`({list}, {key})
+Parameters~
+{list} `(string)`
+{key} `(string|nil)`
 
 ------------------------------------------------------------------------------
                                                                      *qf.load()*
-                           `qf.load`({list}, {name})
-Loads a saved list into the location or quickfix list
+                        `qf.load`({list}, {key}, {opts})
+Restores a saved list into the location or quickfix list
 If name is not given, user will be prompted with all saved lists.
+Parameters~
+{list} `(string)`
+{key} `(string|nil)`
+{opts} `(SetOpts|nil)`
 
 ------------------------------------------------------------------------------
 Class~
-{set_opts}
+{SetOpts}
 Fields~
 {items} `(table)`
 {lines} `(table)`
@@ -152,7 +194,8 @@ Fields~
 {winid} `(number|nil)`
 {title} `(string|nil)`
 {tally} `(boolean|nil)`
-{open} `(boolean)`
+{open} `(boolean|string|nil)` if "auto", open if there are errors
+{save} `(boolean|nil)` saves the previous list
 
 ------------------------------------------------------------------------------
                                                                       *qf.set()*
@@ -162,20 +205,41 @@ If a compiler is given, the items will be parsed from it
 Invalidates follow cache
 Parameters~
 {list} `(string)`
-{opts} set_opts
+{opts} SetOpts
 
 ------------------------------------------------------------------------------
-                                                                    *qf.tally()*
-                          `qf.tally`({list}, {title})
-Suffix the chosen list with a summary of the classified number of entries
+Class~
+{QfInfo}
+Fields~
+{title} `(string)`
+{tally_str} `(string)`
+{tally} Tally
+{list_kind} `(string)`
+{size} `(integer)`
+{idx} `(integer)`
+
+------------------------------------------------------------------------------
+                                                                 *qf.get_info()*
+                         `qf.get_info`({list}, {winid})
+Parameters~
+{list} `(string)`
+Return~
+QfInfo
+
+------------------------------------------------------------------------------
+                                                              *qf.inspect_win()*
+                           `qf.inspect_win`({winid})
+Return~
+`(QfInfo|nil)`
 
 ------------------------------------------------------------------------------
          *qf.keep()* *VkeepText* *QkeepText* *LkeepText* *VkeepType* *QkeepType* *LkeepType*
-                          `qf.keep`({list}, {filter})
+                 `qf.filter`({list}, {filter}, {multiline_msg})
 and keep items in a list based on `filter`
 Parameters~
 {list} `(string)`
-{filter} `(function)`
+{filter} `(fun(Entry): boolean)`
+{multiline_msg} `(boolean)` keep multiline messages spanning many items
 
 ------------------------------------------------------------------------------
                                                    *qf.sort()* *Qsort* *Lsort* *Vsort*
@@ -188,6 +252,160 @@ Sort the items according to file -> line -> column
 Called in |qf.setup|
 Parameters~
 {config} Config
+
+
+==============================================================================
+------------------------------------------------------------------------------
+Class~
+{HistoryItem}
+Fields~
+{key} `(string)`
+{title} `(string)`
+{items} Item
+{tally} Tally
+
+------------------------------------------------------------------------------
+                                                                       *indices*
+                                   `indices`
+Type~
+`(table<string, integer>)`
+
+------------------------------------------------------------------------------
+                                                                       *history*
+                                   `history`
+Type~
+HistoryItem[]
+
+------------------------------------------------------------------------------
+                                                                    *M.insert()*
+                           `M.insert`({key}, {item})
+Parameters~
+{key} `(string)`
+{item} HistoryItem
+
+------------------------------------------------------------------------------
+                                                                      *M.save()*
+                            `M.save`({list}, {key})
+Saves the list using the provided `key`
+Parameters~
+{list} `(string)`
+{key} `(string|nil)`
+
+------------------------------------------------------------------------------
+                                                                       *M.get()*
+                                 `M.get`({key})
+Parameters~
+{key} `(string)`
+Return~
+`(HistoryItem|nil)`
+
+------------------------------------------------------------------------------
+                                                                   *M.restore()*
+                       `M.restore`({list}, {key}, {opts})
+Parameters~
+{list} `(string)`
+{key} `(string)`
+{opts} `(SetOpts|nil)`
+
+
+==============================================================================
+------------------------------------------------------------------------------
+Class~
+{QfList}
+Fields~
+{items} Item[]
+{changedtick} `(number)`
+{size} `(number)`
+{idx} `(number)`
+{title} `(string)`
+{qfbufnr} `(number)`
+
+------------------------------------------------------------------------------
+Class~
+{Item:} Position
+Fields~
+{text} `(string)`
+{idx} `(number)`
+{type} `(string)`
+
+------------------------------------------------------------------------------
+                                                                  *M.get_list()*
+                     `M.get_list`({list}, {what}, {winid})
+Return~
+QfList
+
+------------------------------------------------------------------------------
+                                                             *M.location_list()*
+                           `M.location_list`({winid})
+Returns the window id of the location list if it exists for a window
+
+------------------------------------------------------------------------------
+                                                                         *cache*
+                                    `cache`
+Type~
+QfList
+
+------------------------------------------------------------------------------
+                                                         *M.sorted_list_items()*
+                         `M.sorted_list_items`({list})
+Return~
+Item[]
+
+------------------------------------------------------------------------------
+                                                                *M.get_height()*
+                        `M.get_height`({list}, {config})
+Return~
+`(number)`
+
+------------------------------------------------------------------------------
+Class~
+{Tally}
+Fields~
+{error} `(integer)`
+{warn} `(integer)`
+{info} `(integer)`
+{hint} `(integer)`
+{text} `(integer)`
+{total} `(integer)`
+
+------------------------------------------------------------------------------
+                                                                     *M.tally()*
+                               `M.tally`({items})
+
+Parameters~
+{items} Item[]
+Return~
+Tally
+
+------------------------------------------------------------------------------
+                                                                 *M.tally_str()*
+                      `M.tally_str`({tally}, {highlight})
+Parameters~
+{tally} Tally
+
+------------------------------------------------------------------------------
+Class~
+{Position}
+Fields~
+{bufnr} `(number)`
+{lnum} `(number)`
+{col} `(number)`
+
+------------------------------------------------------------------------------
+                                                               *M.compare_pos()*
+                           `M.compare_pos`({a}, {b})
+Parameters~
+{a} Position
+{b} Position
+Return~
+`(number)`
+
+------------------------------------------------------------------------------
+                                                                   *M.get_pos()*
+                                 `M.get_pos`()
+Returns the cursor position
+Return~
+Position
 
 
  vim:tw=78:ts=8:noet:ft=help:norl:

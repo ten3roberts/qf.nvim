@@ -1,6 +1,7 @@
 local syntax_cache
 local fn = vim.fn
 
+local util = require("qf.util")
 local M = {}
 function M.setup_syntax()
   if syntax_cache then
@@ -17,33 +18,19 @@ function M.setup_syntax()
     syn match QfPath     "\(^[%s]\s\)\@<=[^ :]\+" nextgroup=QfLocation
     syn match QfLocation "[0-9:]\+" contained
 
-    hi link QfError %s
-    hi link QfWarn  %s
-    hi link QfInfo  %s
-    hi link QfHint  %s
-    hi link QfText  %s
+    hi default link QfError DiagnosticSignError
+    hi default link QfWarn  DiagnosticSignWarn
+    hi default link QfInfo  DiagnosticSignInfo
+    hi default link QfHint  DiagnosticSignHint
+    hi default link QfText  DiagnosticSignHint
 
     hi link QfLocation Number
     hi link QfPath     Directory
   ]]
 
-  local config = require("qf").config
-  local d = config.signs
-  local sum = d.E.sign .. d.W.sign .. d.I.sign .. d.N.sign .. d.T.sign .. " "
-  syntax_cache = string.format(
-    template,
-    d.E.sign,
-    d.W.sign,
-    d.I.sign,
-    d.N.sign,
-    d.T.sign,
-    sum,
-    d.E.hl,
-    d.W.hl,
-    d.I.hl,
-    d.N.hl,
-    d.T.hl
-  )
+  local d = util.get_signs()
+  local sum = d.E.text .. d.W.text .. d.I.text .. d.N.text .. d.T.text .. " "
+  syntax_cache = string.format(template, d.E.text, d.W.text, d.I.text, d.N.text, d.T.text, sum)
   return syntax_cache
 end
 
@@ -56,21 +43,17 @@ local function rpad(s, len)
   end
 end
 
-local util = require("qf.util")
-
 function M.format_items(info)
   local items = util.get_list(info.quickfix == 1 and "c" or "l", { i = info.id, items = 1 }, info.winid).items
 
-  local signs = require("qf").config.signs
+  local signs = util.get_signs()
   local l = {}
 
   local maxl = 0
 
   for _, item in ipairs(items) do
-    local icon
-
-    icon = signs[item.type]
-    icon = icon and icon.sign or " "
+    local icon = signs[item.type]
+    icon = icon and icon.text or ""
 
     local t = {}
 

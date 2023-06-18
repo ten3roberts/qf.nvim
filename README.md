@@ -52,18 +52,37 @@ Plug 'ten3roberts/qf.nvim'
 lua require'qf'.setup{}
 ```
 
-## Usage
+## Api
 
-qf.nvim exposes a lua api.
+qf.nvim exposes a lua api and Ex commands.
 
 Most functions require a first parameter list to specify which list to act on.
 Either 'c','qf', or 'quickfix' for affecting the quickfix list, or
 'l','loc','location' for affecting the location list.
 
+
 If a value of 'visible' is given, it will use the currently visible list type,
 or the quickfix window as a fallback.
 
+Ex commands are prefixed with either `Q`, `L` or `V` for which list to use
+
 See `(qf.nvim)[./doc/qf.txt` for more details.
+
+## Navigation
+
+Unlike `:cnext` and `:cprev`, `:Qnext` and `:Qprev` will not navigate to valid entries which contain file names, as well
+as wrapping.
+
+`:Qbelow`, `:Qabove`, `:Lbelow`, `Labove`, etc will navigate to the next or previous entry relative to the cursor.
+However, unlike `:cabove` it *will* cross buffer boundaries.
+
+## Save and Restore
+
+A list can be save with `Qsave` and if no name is given it will use the list name, which is usually the command used.
+
+`Qload` will open a menu to select and restore a previous list.
+
+If you use the `qf.set` api the previous list will automatically be saved.
 
 ## Example keymaps
 ```vim

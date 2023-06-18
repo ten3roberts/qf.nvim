@@ -39,13 +39,14 @@ function M.set_list(list, items, mode, opts)
 end
 
 ---@class QfList
----@field items Entry[]
+---@field items Item[]
 ---@field changedtick number
 ---@field size number
 ---@field idx number
 ---@field title string
+---@field qfbufnr number
 
----@class Entry: Position
+---@class Item: Position
 ---@field text string
 ---@field idx number
 ---@field type string
@@ -109,7 +110,7 @@ end
 ---@type QfList
 local cache = {}
 
----@return Entry[]
+---@return Item[]
 function M.sorted_list_items(list)
   local res = M.get_list(list, { items = 1, changedtick = 1 })
   local cached = cache[list]
@@ -170,27 +171,31 @@ function M.get_height(list, config)
   return math.max(math.min(size, opts.max_height), opts.min_height)
 end
 
+---@class Tally
+---@field error integer
+---@field warn integer
+---@field info integer
+---@field hint integer
+---@field text integer
+---@field total integer
+
 ---comment
----@param list any
----@return integer[]
-function M.tally(list)
-  -- Tally
+---@param items Item[]
+---@return Tally
+function M.tally(items)
   local error = 0
   local warn = 0
-  local information = 0
+  local info = 0
   local hint = 0
   local text = 0
 
-  local sevs = {}
-
-  for _, v in ipairs(M.list_items(list, false)) do
-    sevs[v.type] = (sevs[v.type] or 0) + 1
+  for _, v in ipairs(items) do
     if v.type == "E" then
       error = error + 1
     elseif v.type == "W" then
       warn = warn + 1
     elseif v.type == "I" then
-      information = information + 1
+      info = info + 1
     elseif v.type == "N" then
       hint = hint + 1
     else
@@ -198,7 +203,50 @@ function M.tally(list)
     end
   end
 
-  return { error, warn, information, hint, text }
+  return {
+    error = error,
+    warn = warn,
+    info = info,
+    hint = hint,
+    text = text,
+    total = error + warn + info + hint + text,
+  }
+end
+
+function M.get_signs()
+  return {
+    E = vim.fn.sign_getdefined("DiagnosticSignError")[1],
+    W = vim.fn.sign_getdefined("DiagnosticSignWarn")[1],
+    I = vim.fn.sign_getdefined("DiagnosticSignInfo")[1],
+    N = vim.fn.sign_getdefined("DiagnosticSignHint")[1],
+    T = vim.fn.sign_getdefined("DiagnosticSignHint")[1],
+  }
+end
+
+---@param tally Tally
+function M.tally_str(tally, highlight)
+  local d = M.get_signs()
+  d = {
+    d.E,
+    d.W,
+    d.I,
+    d.N,
+    d.T,
+  }
+
+  local t = {}
+  for i, v in ipairs({ tally.error, tally.warn, tally.info, tally.hint, tally.text }) do
+    if v > 0 then
+      local severity = d[i]
+      if highlight then
+        t[#t + 1] = "%#" .. severity.texthl .. "#" .. severity.text .. " " .. v
+      else
+        t[#t + 1] = (severity.sign or "_") .. " " .. v
+      end
+    end
+  end
+
+  return table.concat(t, " ") .. "%#Normal#"
 end
 
 ---@class Position
@@ -245,6 +293,10 @@ function M.get_pos()
     lnum = pos[2],
     col = pos[3],
   }
+end
+
+function M.log_error(msg)
+  vim.notify("Quickfix: " .. msg, vim.log.levels.ERROR)
 end
 
 return M
