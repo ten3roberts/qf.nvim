@@ -9,6 +9,18 @@ Lnext	qf.txt	/*Lnext*
 Lopen	qf.txt	/*Lopen*
 Lprev	qf.txt	/*Lprev*
 Lsort	qf.txt	/*Lsort*
+M.compare_pos()	qf.txt	/*M.compare_pos()*
+M.get()	qf.txt	/*M.get()*
+M.get_height()	qf.txt	/*M.get_height()*
+M.get_list()	qf.txt	/*M.get_list()*
+M.get_pos()	qf.txt	/*M.get_pos()*
+M.insert()	qf.txt	/*M.insert()*
+M.location_list()	qf.txt	/*M.location_list()*
+M.restore()	qf.txt	/*M.restore()*
+M.save()	qf.txt	/*M.save()*
+M.sorted_list_items()	qf.txt	/*M.sorted_list_items()*
+M.tally()	qf.txt	/*M.tally()*
+M.tally_str()	qf.txt	/*M.tally_str()*
 QToggle	qf.txt	/*QToggle*
 Qabove	qf.txt	/*Qabove*
 Qbelow	qf.txt	/*Qbelow*
@@ -26,6 +38,12 @@ Vbelow	qf.txt	/*Vbelow*
 VkeepText	qf.txt	/*VkeepText*
 VkeepType	qf.txt	/*VkeepType*
 Vsort	qf.txt	/*Vsort*
+cache	qf.txt	/*cache*
+follow_nearest()	qf.txt	/*follow_nearest()*
+follow_next()	qf.txt	/*follow_next()*
+follow_prev()	qf.txt	/*follow_prev()*
+history	qf.txt	/*history*
+indices	qf.txt	/*indices*
 list_defaults	qf.txt	/*list_defaults*
 qf.above()	qf.txt	/*qf.above()*
 qf.below()	qf.txt	/*qf.below()*
@@ -33,6 +51,8 @@ qf.clear()	qf.txt	/*qf.clear()*
 qf.close()	qf.txt	/*qf.close()*
 qf.config	qf.txt	/*qf.config*
 qf.follow()	qf.txt	/*qf.follow()*
+qf.get_info()	qf.txt	/*qf.get_info()*
+qf.inspect_win()	qf.txt	/*qf.inspect_win()*
 qf.keep()	qf.txt	/*qf.keep()*
 qf.load()	qf.txt	/*qf.load()*
 qf.next()	qf.txt	/*qf.next()*
@@ -46,5 +66,5 @@ qf.set()	qf.txt	/*qf.set()*
 qf.setup()	qf.txt	/*qf.setup()*
 qf.setup_autocmds()	qf.txt	/*qf.setup_autocmds()*
 qf.sort()	qf.txt	/*qf.sort()*
-qf.tally()	qf.txt	/*qf.tally()*
 qf.toggle()	qf.txt	/*qf.toggle()*
+seek_entry()	qf.txt	/*seek_entry()*
