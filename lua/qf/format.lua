@@ -61,15 +61,18 @@ function M.format_items(info)
       t[#t + 1] = icon
     end
 
-    local header = (item.bufnr ~= 0 and fn.bufname(item.bufnr) or " ")
-      .. (item.lnum ~= 0 and ":" .. item.lnum or " ")
-      .. (item.col ~= 0 and ":" .. item.col or "")
+    local header = table.concat({
+      item.bufnr ~= 0 and fn.bufname(item.bufnr) or "",
+      item.lnum ~= 0 and item.lnum or "",
+      item.col ~= 0 and item.col or "",
+    }, ":")
+
     maxl = math.max(maxl, #header)
-    -- end
-    t[#t + 1] = rpad(header, maxl)
+
+    t[#t + 1] = rpad(header, maxl + 4)
 
     -- Remove newlines
-    t[#t + 1] = item.text:gsub("[\n\r]", " ↩ ")
+    t[#t + 1] = item.text:gsub("[\n\r]", " ↩ "):gsub("^%s+", "")
 
     l[#l + 1] = table.concat(t, " ")
   end
