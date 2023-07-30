@@ -190,16 +190,18 @@ function M.tally(items)
   local text = 0
 
   for _, v in ipairs(items) do
-    if v.type == "E" then
-      error = error + 1
-    elseif v.type == "W" then
-      warn = warn + 1
-    elseif v.type == "I" then
-      info = info + 1
-    elseif v.type == "N" then
-      hint = hint + 1
-    else
-      text = text + 1
+    if is_valid(v) then
+      if v.type == "E" then
+        error = error + 1
+      elseif v.type == "W" then
+        warn = warn + 1
+      elseif v.type == "I" then
+        info = info + 1
+      elseif v.type == "N" then
+        hint = hint + 1
+      else
+        text = text + 1
+      end
     end
   end
 
@@ -215,11 +217,11 @@ end
 
 function M.get_signs()
   return {
-    E = vim.fn.sign_getdefined("DiagnosticSignError")[1],
-    W = vim.fn.sign_getdefined("DiagnosticSignWarn")[1],
-    I = vim.fn.sign_getdefined("DiagnosticSignInfo")[1],
-    N = vim.fn.sign_getdefined("DiagnosticSignHint")[1],
-    T = vim.fn.sign_getdefined("DiagnosticSignHint")[1],
+    E = vim.fn.sign_getdefined("DiagnosticSignError")[1] or { text = "E", texthl = "DiagnosticSignError" },
+    W = vim.fn.sign_getdefined("DiagnosticSignWarn")[1] or { text = "W", texthl = "DiagnosticSignWarn" },
+    I = vim.fn.sign_getdefined("DiagnosticSignInfo")[1] or { text = "I", texthl = "DiagnosticSignInfo" },
+    N = vim.fn.sign_getdefined("DiagnosticSignHint")[1] or { text = "N", texthl = "DiagnosticSignHint" },
+    T = vim.fn.sign_getdefined("DiagnosticSignHint")[1] or { text = "T", texthl = "DiagnosticSignOk" },
   }
 end
 
