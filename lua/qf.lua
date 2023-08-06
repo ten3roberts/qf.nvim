@@ -522,22 +522,30 @@ end
 local function seek_entry(items, start, direction, func, wrap)
   --- Find next valid
   if direction == 1 then
+    print("Seeking forward", start, #items)
     for i = start, #items do
       local item = items[i]
+      print(i, vim.inspect(item), func(item))
       if func(item) then
         return item
       end
     end
 
-    local items = vim.tbl_filter(func, items)
-    local first = items[1]
+    print("Wrapping")
+    if wrap then
+      local items = vim.tbl_filter(func, items)
+      local first = items[1]
 
-    return first
-  else
-    for i = #items - start + 1, #items do
-      local j = #items - i + 1
-
-      local item = items[j]
+      return first
+    end
+  elseif direction == -1 then
+    print("Seeking backward", start)
+    -- for i = #items - start + 1, #items do
+    --   local j = #items - i + 1
+    for i = start, 1, -1 do
+      local item = items[i]
+      print(i, vim.inspect(item))
+      assert(item)
       if func(item) then
         return item
       end
@@ -549,30 +557,44 @@ local function seek_entry(items, start, direction, func, wrap)
 
       return last
     end
+  else
+    error("Invalid direction " .. direction)
   end
 end
 
 --- Wrapping version of [lc]next. Also takes into account valid entries.
 --- If wrap is nil or true, it will wrap around the list
 ---@tag qf.next() Qnext Lnext
-function qf.next(list, wrap, verbose)
+---@tag qf.prev() Qnext Lnext
+function qf.nav(list, wrap, verbose, dir)
   if wrap == nil then
     wrap = true
   end
   list = fix_list(list)
 
   local info = get_list(list, { items = 1, idx = 0 })
+  print(vim.inspect(info))
 
-  local item = seek_entry(info.items, info.idx + 1, 1, is_valid, wrap)
+  local item = seek_entry(info.items, info.idx + dir, dir, is_valid, wrap)
   if item then
     goto_entry(list, item.idx)
+  elseif verbose then
+    print("No valid entry found")
   end
+end
+
+qf.next = function(list, wrap, verbose)
+  return qf.nav(list, wrap, verbose, 1)
+end
+
+qf.prev = function(list, wrap, verbose, dir)
+  return qf.nav(list, wrap, verbose, -1)
 end
 
 -- Wrapping version of [lc]prev. Also takes into account valid entries.
 -- If wrap is nil or true, it will wrap around the list
 ---@tag qf.prev() Qprev Lprev
-function qf.prev(list, wrap, verbose)
+function qf.nav_group(list, wrap, verbose, dir)
   if wrap == nil then
     wrap = true
   end
@@ -580,13 +602,22 @@ function qf.prev(list, wrap, verbose)
 
   local info = get_list(list, { items = 1, idx = 0 })
 
-  local item = seek_entry(info.items, info.idx - 1, -1, is_valid, wrap)
-
+  local bufnr = api.nvim_get_current_buf()
+  local item = seek_entry(info.items, info.idx + dir, dir, function(item)
+    return is_valid and item.bufnr ~= bufnr
+  end, wrap)
   if item then
     goto_entry(list, item.idx)
   end
 end
 
+qf.next_group = function(list, wrap, verbose)
+  return qf.nav_group(list, wrap, verbose, 1)
+end
+
+qf.prev_group = function(list, wrap, verbose)
+  return qf.nav_group(list, wrap, verbose, -1)
+end
 --- Wrapping version of [lc]above
 --- Will switch buffer
 ---@tag qf.above() Qabove Labove Vabove
