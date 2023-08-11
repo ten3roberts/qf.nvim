@@ -61,11 +61,16 @@ function M.format_items(info)
       t[#t + 1] = icon
     end
 
-    local header = table.concat({
-      item.bufnr ~= 0 and fn.bufname(item.bufnr) or "",
-      item.lnum ~= 0 and item.lnum or "",
-      item.col ~= 0 and item.col or "",
-    }, ":")
+    local header = table.concat(
+      vim.tbl_filter(function(v)
+        return #v > 0
+      end, {
+        item.bufnr ~= 0 and fn.bufname(item.bufnr) or "",
+        item.lnum ~= 0 and tostring(item.lnum) or "",
+        item.col ~= 0 and tostring(item.col) or "",
+      }),
+      ":"
+    )
 
     maxl = math.max(maxl, #header)
 
