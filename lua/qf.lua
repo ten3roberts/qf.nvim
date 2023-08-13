@@ -522,16 +522,13 @@ end
 local function seek_entry(items, start, direction, func, wrap)
   --- Find next valid
   if direction == 1 then
-    print("Seeking forward", start, #items)
     for i = start, #items do
       local item = items[i]
-      print(i, vim.inspect(item), func(item))
       if func(item) then
         return item
       end
     end
 
-    print("Wrapping")
     if wrap then
       local items = vim.tbl_filter(func, items)
       local first = items[1]
@@ -539,12 +536,10 @@ local function seek_entry(items, start, direction, func, wrap)
       return first
     end
   elseif direction == -1 then
-    print("Seeking backward", start)
     -- for i = #items - start + 1, #items do
     --   local j = #items - i + 1
     for i = start, 1, -1 do
       local item = items[i]
-      print(i, vim.inspect(item))
       assert(item)
       if func(item) then
         return item
@@ -573,13 +568,12 @@ function qf.nav(list, wrap, verbose, dir)
   list = fix_list(list)
 
   local info = get_list(list, { items = 1, idx = 0 })
-  print(vim.inspect(info))
 
   local item = seek_entry(info.items, info.idx + dir, dir, is_valid, wrap)
   if item then
     goto_entry(list, item.idx)
   elseif verbose then
-    print("No valid entry found")
+    api.nvim_err_writeln("No valid entry found")
   end
 end
 
