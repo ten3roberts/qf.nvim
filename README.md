@@ -3,25 +3,26 @@ Quickfix and location list management for Neovim.
 
 ## Features
 
-- [X] Automatically open quickfix and location list
-- [X] Automatically close list when empty
-- [X] Close location list when parent window is destroyed
-- [X] Automatically shrink lists to the number of items
-- [X] Toggle list
-- [X] Open and Toggle without losing focus
-- [X] Follow cursor and select nearest entry
-- [X] Navigate location list relative to cursor
-- [X] Wrapping navigation
-- [X] Save and load lists
-- [X] Clear lists
-- [X] Automatically close the location list when quickfix list opens, saving
+- Automatically open quickfix and location list
+- Automatically close list when empty
+- Close location list when parent window is destroyed
+- Automatically shrink lists to the number of items
+- Toggle list
+- Open and Toggle without losing focus
+- Follow cursor and select nearest entry
+- Navigate location list relative to cursor
+- Wrapping navigation
+- Save and load lists
+- Clear lists
+- Automatically close the location list when quickfix list opens, saving
   space
-- [X] Open list at the very bottom of the screen rather than at the bottom of
+- Open list at the very bottom of the screen rather than at the bottom of
   current split
-- [X] Automatically open or close list on window leave and enter
-- [X] Make list regroup to window on split
-- [X] Close other location list when quickfix opens and vice verse
-- [X] Pretty print list entries
+- Automatically open or close list on window leave and enter
+- Make list regroup to window on split
+- Close other location list when quickfix opens and vice verse
+- Pretty print list entries
+- Telescope integration
 
 qf.nvim offers many customization options to suit your workflow.
 
