@@ -30,7 +30,7 @@ The plugin uses the default builtin quickfix list and location list and only
 extends it, which means all builtin behaviour and plugins are compatible, such
 as `:cclose`, `:cnext`, `:copen`, `:grep`, `:make`, `vim.diagnostic.set_qflist`,
 etc. For `:make`, there exists an asynchronous name based build system called
-( recipe.nvim )[https://github.com/ten3roberts/recipe.nvim], which integrates
+[ recipe.nvim ](https://github.com/ten3roberts/recipe.nvim), which integrates
 directly with qf.nvim for added functionality such as error tallying.
 
 ## Installation
