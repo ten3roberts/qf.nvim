@@ -115,7 +115,7 @@ Default setup:
 
 ```lua
 require 'qf'.setup {
-  -- Location list configuration
+    -- Location list configuration
     l = {
         auto_close = true, -- Automatically close location/quickfix list if empty
         auto_follow = 'prev', -- Follow current entry, possible values: prev,next,nearest, or false to disable
@@ -146,10 +146,10 @@ require 'qf'.setup {
         relativenumber = false, -- Show relative line numbers in list
         unfocus_close = false, -- Close list when window loses focus
         focus_open = false, -- Auto open list on window focus if it contains items
-      },
-      close_other = false, -- Close location list when quickfix list opens
-      pretty = true, -- Pretty print quickfix lists
-      silent = false, -- Suppress messages like "(1 of 3): *line content*" on jump
+    },
+    close_other = false, -- Close location list when quickfix list opens
+    pretty = true, -- Pretty print quickfix lists
+    silent = false, -- Suppress messages like "(1 of 3): *line content*" on jump
 }
 ```
 
