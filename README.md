@@ -146,7 +146,7 @@ require 'qf'.setup {
         relativenumber = false, -- Show relative line numbers in list
         unfocus_close = false, -- Close list when window loses focus
         focus_open = false, -- Auto open list on window focus if it contains items
-      }
+      },
       close_other = false, -- Close location list when quickfix list opens
       pretty = true, -- Pretty print quickfix lists
       silent = false, -- Suppress messages like "(1 of 3): *line content*" on jump
