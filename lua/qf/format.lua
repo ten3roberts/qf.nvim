@@ -45,46 +45,57 @@ end
 
 function M.format_items(info)
   local items = util.get_list(info.quickfix == 1 and "c" or "l", { i = info.id, items = 1 }, info.winid).items
-
   local signs = util.get_signs()
-  local l = {}
 
-  local maxl = 0
+  local lines = {}
+
+  local max_bufname_len = 0
+  local max_loc_len = 0
 
   for _, item in ipairs(items) do
+    local line = {}
+
     local icon = signs[item.type]
-    icon = icon and icon.text or ""
+    line.icon = icon and icon.text or " "
 
-    local t = {}
+    line.bufname = item.bufnr ~= 0 and vim.fn.fnamemodify(fn.bufname(item.bufnr), ":p:.") or ""
 
-    if icon then
-      t[#t + 1] = icon
-    end
-
-    local bufname = item.bufnr ~= 0 and vim.fn.fnamemodify(fn.bufname(item.bufnr), ":p:.") or ""
-
-    local header = table.concat(
+    line.location = table.concat(
       vim.tbl_filter(function(v)
         return #v > 0
       end, {
-        bufname,
         item.lnum ~= 0 and tostring(item.lnum) or "",
         item.col ~= 0 and tostring(item.col) or "",
       }),
       ":"
     )
 
-    maxl = math.max(maxl, #header)
-
-    t[#t + 1] = rpad(header, maxl + 4)
-
     -- Remove newlines
-    t[#t + 1] = item.text:gsub("[\n\r]", " ↩ "):gsub("^%s+", "")
+    line.text = item.text:gsub("[\n\r]", " ↩ "):gsub("^%s+", "")
 
-    l[#l + 1] = table.concat(t, " ")
+    max_bufname_len = math.max(max_bufname_len, #line.bufname)
+    max_loc_len = math.max(max_loc_len, #line.location)
+
+    table.insert(lines, line)
   end
 
-  return l
+  local result = {}
+  for _, line in ipairs(lines) do
+    line.bufname = rpad(line.bufname, max_bufname_len + 1)
+    line.location = rpad(line.location, max_loc_len + 2)
+
+    table.insert(
+      result,
+      table.concat({
+        line.icon,
+        line.bufname,
+        line.location,
+        line.text,
+      }, " ")
+    )
+  end
+
+  return result
 end
 
 _G.__qf_format = M.format_items
