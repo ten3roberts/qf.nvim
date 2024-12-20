@@ -4,6 +4,11 @@ local fn = vim.fn
 local bo = vim.bo
 local wo = vim.wo
 
+local cache = {
+  c = {},
+  l = {},
+}
+
 --- Documentation
 --- Quickfix and Location list management for Neovim.
 ---
@@ -113,7 +118,6 @@ end
 ---@param config Config
 function qf.setup(config)
   qf.config = vim.tbl_deep_extend("force", defaults, config or {})
-  qf.saved = {}
 
   if qf.config.pretty then
     local fmt = require("qf.format")
@@ -331,14 +335,9 @@ end
 
 --- Clears the quickfix or current location list
 ---@param list string
----@param name string|nil save the list before clearing under name
 ---@tag qf.clear() Qclear Lclear
-function qf.clear(list, name)
+function qf.clear(list)
   list = fix_list(list)
-
-  if name then
-    qf.save(list, name)
-  end
 
   if list == "c" then
     fn.setqflist({})
@@ -473,11 +472,12 @@ function qf.follow(list, strategy, limit)
   local line = pos[2]
 
   -- Cursor hasn't moved to a new line since last call
-  if opts and opts.last_line and opts.last_line == line then
+  local cached = cache[list]
+  if cached.last_line and cached.last_line == line then
     return
   end
 
-  opts.last_line = line
+  cached.last_line = line
 
   local strategy_func = strategy_lookup[strategy or "prev"]
   if strategy_func == nil then
@@ -581,7 +581,7 @@ qf.next = function(list, wrap, verbose)
   return qf.nav(list, wrap, verbose, 1)
 end
 
-qf.prev = function(list, wrap, verbose, dir)
+qf.prev = function(list, wrap, verbose)
   return qf.nav(list, wrap, verbose, -1)
 end
 
@@ -651,25 +651,6 @@ function qf.below(list, wrap, verbose)
   goto_entry(list, item.idx)
 end
 
----@param list string
----@param key string|nil
-function qf.save(list, key)
-  require("qf.history").save(list, key)
-end
-
---- Restores a saved list into the location or quickfix list
---- If name is not given, user will be prompted with all saved lists.
----@param list string
----@param key string|nil
----@param opts SetOpts|nil
-function qf.load(list, key, opts)
-  if key then
-    require("qf.history").restore(list, key, opts)
-  else
-    require("qf.history").pick(list, opts)
-  end
-end
-
 ---@class SetOpts
 ---@field items table
 ---@field lines table
@@ -679,7 +660,6 @@ end
 ---@field title string|nil
 ---@field tally boolean|nil
 ---@field open boolean|string|nil if "auto", open if there are errors
----@field save boolean|nil saves the previous list
 
 --- Set location or quickfix list items
 --- If a compiler is given, the items will be parsed from it
@@ -688,10 +668,6 @@ end
 ---@param opts SetOpts
 function qf.set(list, opts)
   list = fix_list(list)
-
-  if opts.save then
-    qf.save(list, nil)
-  end
 
   local old_c = vim.b.current_compiler
 
@@ -733,7 +709,7 @@ function qf.set(list, opts)
     vim.cmd("compiler " .. old_c)
   end
 
-  qf.config[list].last_line = nil
+  cache[list].last_line = nil
 
   if opts.cwd then
     api.nvim_set_current_dir(old_cwd)
@@ -880,7 +856,6 @@ function qf.setup_autocmds(config)
 
   local follow = qf.follow
   local open = qf.open
-  local close = qf.close
 
   au("WinClosed", function(o)
     local winid = tonumber(o.file)
